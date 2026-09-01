@@ -47,20 +47,21 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View style={styles.logoWrapper}>
-          <Image
-            source={require('../assets/Batangas_logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.wordmark}>BE-SMART</Text>
-        </View>
-
         {/* Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Welcome back</Text>
-          <Text style={styles.cardSubtitle}>Log in to your account</Text>
+
+          {/* Logo + wordmark inside card */}
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('../assets/Batangas_logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.wordmark}>BE-SMART</Text>
+            <Text style={styles.tagline}>
+              Batangas Environmental Segregation, Monitoring,{'\n'}Analytics &amp; Rewards Technology
+            </Text>
+          </View>
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -100,15 +101,6 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
             <Text style={styles.loginBtnText}>Log In</Text>
           </TouchableOpacity>
 
-          {/* Demo hint */}
-          <View style={styles.hintBox}>
-            <Text style={styles.hintTitle}>Demo Credentials</Text>
-            <Text style={styles.hintText}>Resident: resident@besmart.ph / resident123</Text>
-            <Text style={styles.hintText}>MRF Worker: mrf@besmart.ph / mrf123</Text>
-            <Text style={styles.hintText}>MRF Buyer: buyer@besmart.ph / buyer123</Text>
-            <Text style={styles.hintText}>Collector: collector@besmart.ph / collector123</Text>
-          </View>
-
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
@@ -134,14 +126,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    gap: 28,
   },
-  logoWrapper: { alignItems: 'center', gap: 8 },
-  logo: { width: 80, height: 80 },
-  wordmark: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.primary, letterSpacing: 2 },
+  logoWrapper: { alignItems: 'center', gap: 8, paddingBottom: 4 },
+  logo: { width: 88, height: 88 },
+  wordmark: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.textPrimary, letterSpacing: 2 },
+  tagline: { fontSize: typography.size.xs, color: colors.primary, textAlign: 'center', lineHeight: 18, fontWeight: typography.weight.medium },
   card: { width: '100%', backgroundColor: colors.secondary, borderRadius: 18, padding: 24, gap: 14, borderWidth: 1, borderColor: colors.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 4 },
-  cardTitle: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.textPrimary },
-  cardSubtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: -8 },
   errorText: { fontSize: typography.size.sm, color: colors.error, backgroundColor: colors.errorLight, padding: 10, borderRadius: 8 },
   input: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8, padding: 12, fontSize: typography.size.base, color: colors.textPrimary, backgroundColor: colors.background },
   passwordWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8, paddingHorizontal: 12, backgroundColor: colors.background },
@@ -150,9 +140,6 @@ const styles = StyleSheet.create({
   forgotText: { fontSize: typography.size.sm, color: colors.primary, fontWeight: typography.weight.medium },
   loginBtn: { backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 14, alignItems: 'center', shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   loginBtnText: { color: colors.secondary, fontSize: typography.size.base, fontWeight: typography.weight.bold },
-  hintBox: { backgroundColor: colors.successLight, borderRadius: 8, padding: 12, gap: 4, borderWidth: 1, borderColor: '#A5D6A7' },
-  hintTitle: { fontSize: typography.size.xs, fontWeight: typography.weight.bold, color: colors.primary },
-  hintText: { fontSize: typography.size.xs, color: colors.textSecondary },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.cardBorder },
   dividerText: { fontSize: typography.size.sm, color: colors.textMuted },
