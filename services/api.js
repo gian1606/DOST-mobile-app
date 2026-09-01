@@ -1,40 +1,67 @@
-// services/api.js
-import { Platform } from 'react-native';
+// Base URL of the FastAPI backend. Point this at your deployed API,
+// or your local machine's LAN IP when testing with Expo Go
+// (e.g. "http://192.168.1.50:8082" — "localhost" won't work from a phone).
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8082';
 
-// Point this at your backend. While developing:
-// - Web: localhost works fine.
-// - Physical phone via Expo Go: localhost means the PHONE, not your computer.
-//   Use your computer's LAN IP instead, e.g. "http://192.168.1.23:8000".
-//   Find it with `ipconfig` (Windows) or `ifconfig`/`ipconfig getifaddr en0` (Mac).
-const BACKEND_URL = 'http://192.168.1.23:8000'; // <-- change this
+// How long to wait before giving up on a stalled/unreachable connection.
+// fetch() has no built-in timeout, so without this a bad connection can
+// hang far longer than feels acceptable to the user.
+const REQUEST_TIMEOUT_MS = 12000;
 
 /**
- * Sends a captured photo to the backend for S3 upload + Rekognition analysis.
- * @param {string} uri - local file uri (native) or blob/object URL (web)
- * @param {Blob} [webBlob] - on web, pass the actual Blob captured from the canvas
- * @returns {Promise<{verdict: 'full'|'not full', s3_key: string}>}
+ * Wraps fetch with a timeout. Rejects with a clear error if the request
+ * doesn't complete (response headers received) within timeoutMs.
  */
-export async function analyzePhoto(uri, webBlob) {
-  const formData = new FormData();
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (Platform.OS === 'web' && webBlob) {
-    formData.append('photo', webBlob, 'photo.jpg');
-  } else {
-    formData.append('photo', {
-      uri,
-      name: 'photo.jpg',
-      type: 'image/jpeg',
-    });
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    // Covers "no network", DNS failures, etc.
+    throw new Error('Could not reach the server. Please check your connection.');
+  } finally {
+    clearTimeout(timeoutId);
   }
+}
 
-  const response = await fetch(`${BACKEND_URL}/analyze`, {
+/**
+ * Uploads a captured photo for bin-fullness analysis.
+ * Returns: { verdict: "full" | "not full", s3_key: string }
+ * Throws on timeout, network failure, or a non-2xx response from the API —
+ * callers (e.g. BinPhotoScreen) should wrap this in try/catch.
+ */
+export async function analyzePhoto(photoUri) {
+  const formData = new FormData();
+  formData.append('photo', {
+    uri: photoUri,
+    name: 'photo.jpg',
+    type: 'image/jpeg',
+  });
+
+  const response = await fetchWithTimeout(`${API_BASE_URL}/analyze`, {
     method: 'POST',
     body: formData,
+    headers: {
+      // Let fetch/RN set the multipart boundary automatically — do NOT set
+      // 'Content-Type': 'multipart/form-data' manually, it breaks the boundary.
+      Accept: 'application/json',
+    },
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Backend error (${response.status}): ${text}`);
+    let detail = `Analysis failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      // response wasn't JSON — fall back to the generic message above
+    }
+    throw new Error(detail);
   }
 
   return response.json();

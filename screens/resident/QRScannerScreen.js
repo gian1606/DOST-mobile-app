@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -10,6 +11,7 @@ export default function QRScannerScreen({ navigation }) {
   const [flashOn, setFlashOn] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const isFocused = useIsFocused();
 
   if (!permission) return <View style={styles.screen} />;
 
@@ -32,18 +34,25 @@ export default function QRScannerScreen({ navigation }) {
     // bin QR codes are encoded (e.g. a bin ID, or a URL containing one).
     const binId = data;
 
-    navigation.navigate('BinPhoto', { binId });
+    // `replace` (not `navigate`) so this screen — and its CameraView — fully
+    // unmounts before BinPhotoScreen mounts its own CameraView. Two mounted
+    // CameraViews at once causes the second camera to render black.
+    navigation.replace('BinPhoto', { binId });
   };
 
   return (
     <View style={styles.screen}>
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        facing="back"
-        enableTorch={flashOn}
-        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-      />
+      {/* Only mount the camera while this screen is actually focused, so it
+          releases the camera hardware as soon as we navigate away. */}
+      {isFocused && (
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          enableTorch={flashOn}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+        />
+      )}
 
       {/* Flash toggle */}
       <TouchableOpacity

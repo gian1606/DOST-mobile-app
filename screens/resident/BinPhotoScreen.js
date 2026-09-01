@@ -39,7 +39,21 @@ export default function BinPhotoScreen({ route, navigation }) {
       });
     } catch (error) {
       console.error(error);
-      Alert.alert('Something went wrong', 'Could not analyze the photo. Please try again.');
+      // Analysis failed — let the user know, then send them back to Home
+      // rather than leaving them stuck on the camera for this bin.
+      Alert.alert(
+        'Photo cannot be processed',
+        "We couldn't process this photo right now. Please try again later.",
+        [
+          {
+            text: 'OK',
+            onPress: () =>
+              // Explicitly target the Home tab — popToTop() alone would land
+              // wherever ResidentTabsMain last was (e.g. the QR tab).
+              navigation.navigate('ResidentTabsMain', { screen: 'Home' }),
+          },
+        ]
+      );
     } finally {
       setIsProcessing(false);
     }

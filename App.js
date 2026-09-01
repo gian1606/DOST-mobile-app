@@ -15,13 +15,13 @@ import RegistrationScreen from './screens/RegistrationScreen';
 import OTPScreen          from './screens/OTPScreen';
 
 // Resident screens
-import ResidentHome         from './screens/resident/HomeScreen';
-import ResidentRewards      from './screens/resident/RewardsScreen';
-import ResidentQRScanner    from './screens/resident/QRScannerScreen';
+import ResidentHome           from './screens/resident/HomeScreen';
+import ResidentRewards        from './screens/resident/RewardsScreen';
+import ResidentQRScanner      from './screens/resident/QRScannerScreen';
 import ResidentBinPhotoScreen from './screens/resident/BinPhotoScreen';
-import ResidentResultScreen from './screens/resident/ResultScreen';
-import ResidentTransactions from './screens/resident/TransactionsScreen';
-import ResidentProfile      from './screens/resident/ProfileScreen';
+import ResidentResultScreen   from './screens/resident/ResultScreen';
+import ResidentTransactions   from './screens/resident/TransactionsScreen';
+import ResidentProfile        from './screens/resident/ProfileScreen';
 
 // MRF screens
 import MRFHome         from './screens/mrf/HomeScreen';
@@ -47,6 +47,7 @@ import CollectorRoute        from './screens/collector/RouteScreen';
 
 const Stack               = createStackNavigator();
 const Tab                 = createBottomTabNavigator();
+const ResidentRootStack   = createStackNavigator();
 const CollectorRootStack  = createStackNavigator();
 
 // ─── Shared tab navigator config ─────────────────────────────────────────────
@@ -108,6 +109,7 @@ function ResidentTabs({ setIsAuthenticated }) {
   );
 }
 
+// Root stack wraps resident tabs + BinPhoto + Result as full-screen overlays
 function ResidentRoot({ setIsAuthenticated }) {
   return (
     <ResidentRootStack.Navigator screenOptions={{ headerShown: false }}>
@@ -119,6 +121,7 @@ function ResidentRoot({ setIsAuthenticated }) {
     </ResidentRootStack.Navigator>
   );
 }
+
 // ─── MRF tabs ─────────────────────────────────────────────────────────────────
 function MRFTabs({ setIsAuthenticated }) {
   return (
@@ -289,7 +292,7 @@ export default function App() {
   return (
     <NavigationContainer>
       {!isAuthenticated                        && <AuthStack      setIsAuthenticated={handleSetAuth} />}
-      {isAuthenticated && userRole === 'resident'  && <ResidentRoots  setIsAuthenticated={handleSetAuth} />}
+      {isAuthenticated && userRole === 'resident'  && <ResidentRoot  setIsAuthenticated={handleSetAuth} />}
       {isAuthenticated && userRole === 'mrf'       && <MRFTabs       setIsAuthenticated={handleSetAuth} />}
       {isAuthenticated && userRole === 'buyer'     && <BuyerTabs     setIsAuthenticated={handleSetAuth} />}
       {isAuthenticated && userRole === 'collector' && <CollectorTabs setIsAuthenticated={handleSetAuth} />}
@@ -332,4 +335,3 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 });
-
