@@ -18,6 +18,8 @@ import OTPScreen          from './screens/OTPScreen';
 import ResidentHome         from './screens/resident/HomeScreen';
 import ResidentRewards      from './screens/resident/RewardsScreen';
 import ResidentQRScanner    from './screens/resident/QRScannerScreen';
+import ResidentBinPhotoScreen from './screens/resident/BinPhotoScreen';
+import ResidentResultScreen from './screens/resident/ResultScreen';
 import ResidentTransactions from './screens/resident/TransactionsScreen';
 import ResidentProfile      from './screens/resident/ProfileScreen';
 
@@ -106,6 +108,17 @@ function ResidentTabs({ setIsAuthenticated }) {
   );
 }
 
+function ResidentRoot({ setIsAuthenticated }) {
+  return (
+    <ResidentRootStack.Navigator screenOptions={{ headerShown: false }}>
+      <ResidentRootStack.Screen name="ResidentTabsMain">
+        {() => <ResidentTabs setIsAuthenticated={setIsAuthenticated} />}
+      </ResidentRootStack.Screen>
+      <ResidentRootStack.Screen name="BinPhoto" component={ResidentBinPhotoScreen} />
+      <ResidentRootStack.Screen name="Result"   component={ResidentResultScreen} />
+    </ResidentRootStack.Navigator>
+  );
+}
 // ─── MRF tabs ─────────────────────────────────────────────────────────────────
 function MRFTabs({ setIsAuthenticated }) {
   return (
@@ -276,7 +289,7 @@ export default function App() {
   return (
     <NavigationContainer>
       {!isAuthenticated                        && <AuthStack      setIsAuthenticated={handleSetAuth} />}
-      {isAuthenticated && userRole === 'resident'  && <ResidentTabs  setIsAuthenticated={handleSetAuth} />}
+      {isAuthenticated && userRole === 'resident'  && <ResidentRoots  setIsAuthenticated={handleSetAuth} />}
       {isAuthenticated && userRole === 'mrf'       && <MRFTabs       setIsAuthenticated={handleSetAuth} />}
       {isAuthenticated && userRole === 'buyer'     && <BuyerTabs     setIsAuthenticated={handleSetAuth} />}
       {isAuthenticated && userRole === 'collector' && <CollectorTabs setIsAuthenticated={handleSetAuth} />}

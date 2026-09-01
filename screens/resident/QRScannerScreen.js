@@ -1,15 +1,49 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import ScanFrame from '../../components/ScanFrame';
 
-export default function QRScannerScreen() {
+export default function QRScannerScreen({ navigation }) {
   const [flashOn, setFlashOn] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+
+  if (!permission) return <View style={styles.screen} />;
+
+  if (!permission.granted) {
+    return (
+      <View style={[styles.screen, styles.centerContent]}>
+        <Text style={styles.instruction}>Camera permission is needed to scan bins</Text>
+        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+          <Text style={{ color: '#fff' }}>Grant permission</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const handleBarcodeScanned = ({ data }) => {
+    if (scanned) return; // prevent double-firing while navigating
+    setScanned(true);
+
+    // `data` is the raw QR code content — adjust parsing to however your
+    // bin QR codes are encoded (e.g. a bin ID, or a URL containing one).
+    const binId = data;
+
+    navigation.navigate('BinPhoto', { binId });
+  };
 
   return (
     <View style={styles.screen}>
+      <CameraView
+        style={StyleSheet.absoluteFillObject}
+        facing="back"
+        enableTorch={flashOn}
+        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+      />
 
       {/* Flash toggle */}
       <TouchableOpacity
@@ -25,20 +59,26 @@ export default function QRScannerScreen() {
       </TouchableOpacity>
 
       {/* Scan area */}
-      <View style={styles.scanArea}>
+      <View style={styles.scanArea} pointerEvents="none">
         <ScanFrame />
         <Text style={styles.instruction}>Align QR code within the frame</Text>
         <Text style={styles.subInstruction}>
           Scan a bin's QR code to earn ECO
         </Text>
       </View>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#1A1A1A' },
+  centerContent: { justifyContent: 'center', alignItems: 'center', padding: 20, gap: 16 },
+  permissionBtn: {
+    backgroundColor: colors.secondary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
   flashBtn: {
     position: 'absolute',
     top: 56,
