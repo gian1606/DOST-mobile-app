@@ -7,12 +7,20 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../theme/typography';
 
-// Mock credentials
-const MOCK_CREDENTIALS = {
-  'resident@besmart.ph':  { password: 'resident123',  role: 'resident'  },
-  'mrf@besmart.ph':       { password: 'mrf123',        role: 'mrf'       },
-  'buyer@besmart.ph':     { password: 'buyer123',      role: 'buyer'     },
-  'collector@besmart.ph': { password: 'collector123',  role: 'collector' },
+// Android emulator uses 10.0.2.2 to reach host localhost.
+// Physical device (iOS or Android) must use your machine's LAN IP.
+const IS_EMULATOR = false; // set to true if running on Android emulator
+const API_URL = IS_EMULATOR
+  ? 'http://10.0.2.2:3000/api'
+  : 'http://192.168.0.15:3000/api';
+
+// Mobile app roles only — web admin roles are not allowed on the mobile app
+const MOBILE_ROLES = ['resident', 'mrf_worker', 'mrf_buyer', 'collector'];
+
+// Map DB role values to the role keys used in App.js navigation
+const ROLE_MAP = {
+  mrf_worker: 'mrf',
+  mrf_buyer:  'buyer',
 };
 
 /* ── Floating-label input ──────────────────────────────────────────────── */
@@ -32,27 +40,20 @@ function FloatingInput({ label, value, onChangeText, secureTextEntry, keyboardTy
     }
   }
 
-  // Label slides from vertically-centered → top of field
-  const labelTop  = anim.interpolate({ inputRange: [0, 1], outputRange: [16, 6] });
-  const labelSize = anim.interpolate({ inputRange: [0, 1], outputRange: [15, 10] });
+  const labelTop   = anim.interpolate({ inputRange: [0, 1], outputRange: [16, 6] });
+  const labelSize  = anim.interpolate({ inputRange: [0, 1], outputRange: [15, 10] });
   const labelColor = focused ? '#86EFAC' : 'rgba(255,255,255,0.50)';
 
   return (
     <View style={[styles.inputBox, focused && styles.inputBoxFocused]}>
-      {/* Floating label */}
       <Animated.Text
-        style={[
-          styles.floatingLabel,
-          { top: labelTop, fontSize: labelSize, color: labelColor },
-        ]}
+        style={[styles.floatingLabel, { top: labelTop, fontSize: labelSize, color: labelColor }]}
         pointerEvents="none"
       >
         {label}
       </Animated.Text>
-
-      {/* Actual input — padding shifts down to leave room for the label */}
       <TextInput
-        style={[styles.textInput, { paddingTop: 20, paddingBottom: 6 }]}
+        style={styles.textInput}
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
@@ -63,7 +64,6 @@ function FloatingInput({ label, value, onChangeText, secureTextEntry, keyboardTy
         placeholderTextColor="transparent"
         placeholder=""
       />
-
       {rightSlot && <View style={styles.rightSlot}>{rightSlot}</View>}
     </View>
   );
@@ -96,13 +96,48 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  function handleLogin() {
-    if (!email || !password) { setError('Please fill in all fields.'); return; }
-    const cred = MOCK_CREDENTIALS[email.trim().toLowerCase()];
-    if (!cred || cred.password !== password) { setError('Invalid email or password.'); return; }
+  async function handleLogin() {
+    if (!email || !password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    setLoading(true);
     setError('');
-    setIsAuthenticated(true, cred.role);
+
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Invalid email or password.');
+        setLoading(false);
+        return;
+      }
+
+      const { user } = data;
+
+      // Block web-only roles from accessing the mobile app
+      if (!MOBILE_ROLES.includes(user.role)) {
+        setError('This account does not have access to the mobile app.');
+        setLoading(false);
+        return;
+      }
+
+      // Map role to the key App.js expects
+      const appRole = ROLE_MAP[user.role] || user.role;
+      setIsAuthenticated(true, appRole);
+
+    } catch {
+      setError('Unable to connect to the server. Please check your connection.');
+      setLoading(false);
+    }
   }
 
   return (
@@ -125,7 +160,6 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
         >
           {/* ── Glassmorphism card ── */}
           <View style={styles.card}>
-            {/* Top shine strip */}
             <View style={styles.shine} />
 
             {/* Logo */}
@@ -148,7 +182,6 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
               </View>
             )}
 
-            {/* Email */}
             <FloatingInput
               label="Email Address"
               value={email}
@@ -157,7 +190,6 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
               autoCapitalize="none"
             />
 
-            {/* Password */}
             <FloatingInput
               label="Password"
               value={password}
@@ -174,24 +206,27 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
               }
             />
 
-            {/* Forgot */}
             <TouchableOpacity style={styles.forgotWrap}>
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {/* Login button */}
-            <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} activeOpacity={0.82}>
-              <Text style={styles.loginBtnText}>Log In</Text>
+            <TouchableOpacity
+              style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+              onPress={handleLogin}
+              activeOpacity={0.82}
+              disabled={loading}
+            >
+              <Text style={styles.loginBtnText}>
+                {loading ? 'Signing in…' : 'Log In'}
+              </Text>
             </TouchableOpacity>
 
-            {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>or</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Register */}
             <RegisterLink onPress={() => navigation.navigate('Registration')} />
           </View>
         </ScrollView>
@@ -202,7 +237,7 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
 
 /* ── Styles ─────────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#111827' },
+  bg:   { flex: 1, backgroundColor: '#111827' },
   scrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.52)',
@@ -281,26 +316,24 @@ const styles = StyleSheet.create({
     minHeight: 58,
     justifyContent: 'center',
   },
-  inputBoxFocused: {
-    borderColor: '#2E7D32',
-  },
+  inputBoxFocused: { borderColor: '#2E7D32' },
   floatingLabel: {
     position: 'absolute',
     left: 14,
     zIndex: 1,
-    pointerEvents: 'none',
   },
   textInput: {
     fontSize: typography.size.base,
     color: '#fff',
     paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 6,
     paddingRight: 44,
   },
   rightSlot: {
     position: 'absolute',
     right: 12,
-    top: 0,
-    bottom: 0,
+    top: 0, bottom: 0,
     justifyContent: 'center',
   },
 
@@ -324,6 +357,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  loginBtnDisabled: { opacity: 0.7 },
   loginBtnText: {
     color: '#fff',
     fontSize: typography.size.base,
