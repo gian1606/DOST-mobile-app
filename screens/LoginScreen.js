@@ -7,8 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
-const API_URL = 'http://10.0.2.2:3000/api'; // Android emulator → localhost
-// For physical device, replace with your machine's local IP e.g. http://192.168.1.x:3000/api
+// Android emulator uses 10.0.2.2 to reach host localhost.
+// Physical device (iOS or Android) must use your machine's LAN IP.
+const IS_EMULATOR = false; // set to true if running on Android emulator
+const API_URL = IS_EMULATOR
+  ? 'http://10.0.2.2:3000/api'
+  : 'http://192.168.0.15:3000/api';
 
 // Mobile app roles only — web admin roles are not allowed on the mobile app
 const MOBILE_ROLES = ['resident', 'mrf_worker', 'mrf_buyer', 'collector'];
