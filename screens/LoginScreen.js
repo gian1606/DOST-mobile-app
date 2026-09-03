@@ -9,10 +9,8 @@ import { typography } from '../theme/typography';
 
 // Android emulator uses 10.0.2.2 to reach host localhost.
 // Physical device (iOS or Android) must use your machine's LAN IP.
-const IS_EMULATOR = false;
-const API_URL = IS_EMULATOR
-  ? 'http://10.0.2.2:3000/api'
-  : 'http://192.168.0.15:3000/api';
+// Set EXPO_PUBLIC_API_URL in .env to switch without touching code.
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.15:3000/api';
 
 // Mobile app roles only — web admin roles are not allowed on the mobile app
 const MOBILE_ROLES = ['resident', 'mrf_worker', 'mrf_buyer', 'collector'];
