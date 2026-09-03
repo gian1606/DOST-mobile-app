@@ -7,10 +7,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../theme/typography';
 
-// Android emulator uses 10.0.2.2 to reach host localhost.
-// Physical device (iOS or Android) must use your machine's LAN IP.
-// Set EXPO_PUBLIC_API_URL in .env to switch without touching code.
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.15:3000/api';
+// API base URL is set via EXPO_PUBLIC_API_URL in .env
+// Update .env when switching networks — do not hardcode the IP here.
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 // Mobile app roles only — web admin roles are not allowed on the mobile app
 const MOBILE_ROLES = ['resident', 'mrf_worker', 'mrf_buyer', 'collector'];
