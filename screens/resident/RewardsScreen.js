@@ -1,185 +1,210 @@
-import { useState } from 'react';
-import {
-  ScrollView, View, Text, TouchableOpacity,
-  StyleSheet, Modal,
-} from 'react-native';
+import { useState, useCallback } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { mockUser, mockRewards } from '../../mock/data';
 import EcoTokenBadge from '../../components/EcoTokenBadge';
 import CategoryPill from '../../components/CategoryPill';
 import RewardCard from '../../components/RewardCard';
+import { api, getUser } from '../../api';
 
 const CATEGORIES = ['All', 'Food', 'Shopping', 'Services', 'Utilities'];
 
 export default function RewardsScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
+  const [rewards, setRewards]               = useState([]);
+  const [balance, setBalance]               = useState(0);
+  const [loading, setLoading]               = useState(true);
   const [selectedReward, setSelectedReward] = useState(null);
   const [modalVisible, setModalVisible]     = useState(false);
   const [redeemed, setRedeemed]             = useState(false);
+  const [redemptionId, setRedemptionId]     = useState(null);
   const [errorMsg, setErrorMsg]             = useState('');
+  const [submitting, setSubmitting]         = useState(false);
+  const user = getUser();
 
-  const featured = mockRewards.find((r) => r.featured);
-  const filtered = mockRewards.filter((r) =>
-    !r.featured && (activeCategory === 'All' || r.category === activeCategory)
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      Promise.all([
+        api.get('/eco/rewards'),
+        api.get('/eco/balance'),
+      ]).then(([rewardsData, balanceData]) => {
+        setRewards(rewardsData);
+        setBalance(Number(balanceData.balance));
+      }).catch(() => {}).finally(() => setLoading(false));
+    }, [])
   );
 
   function handleRedeem(id) {
-    const reward = mockRewards.find((r) => r.id === id);
+    const reward = rewards.find((r) => r.id === id);
     setSelectedReward(reward);
     setRedeemed(false);
     setErrorMsg('');
+    setRedemptionId(null);
     setModalVisible(true);
   }
 
-  function confirmRedeem() {
-    if (selectedReward.tokenCost > mockUser.ecoTokenBalance) {
-      setErrorMsg('Insufficient ECO for this reward.');
-    } else {
+  async function confirmRedeem() {
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      const data = await api.post(`/eco/rewards/${selectedReward.id}/redeem`, {});
+      setRedemptionId(data.redemptionId);
+      setBalance((prev) => prev - selectedReward.eco_cost);
       setRedeemed(true);
-      setErrorMsg('');
+    } catch (err) {
+      setErrorMsg(err.message || 'Redemption failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
+  }
+
+  // Normalize API field names to what RewardCard expects
+  const normalizedRewards = rewards.map((r) => ({
+    ...r,
+    tokenCost: r.eco_cost,
+  }));
+
+  const featured = normalizedRewards.find((r) => r.featured);
+  const filtered = normalizedRewards.filter((r) =>
+    !r.featured && (activeCategory === 'All' || r.category === activeCategory)
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
   }
 
   return (
     <View style={styles.screen}>
 
-      {/* Colored header */}
       <View style={styles.header}>
         <Text style={styles.title}>Eco Rewards Store</Text>
         <Text style={styles.subtitle}>Redeem your tokens for real rewards</Text>
-        <EcoTokenBadge variant="pill" balance={mockUser.ecoTokenBalance} />
+        <EcoTokenBadge variant="pill" balance={balance} />
       </View>
 
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-      {/* Category filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {CATEGORIES.map((cat) => (
-          <CategoryPill
-            key={cat}
-            label={cat}
-            isActive={activeCategory === cat}
-            onPress={() => setActiveCategory(cat)}
-          />
-        ))}
-      </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {CATEGORIES.map((cat) => (
+            <CategoryPill
+              key={cat}
+              label={cat}
+              isActive={activeCategory === cat}
+              onPress={() => setActiveCategory(cat)}
+            />
+          ))}
+        </ScrollView>
 
-      {/* Featured banner */}
-      {featured && (
-        <View style={styles.featuredCard}>
-          <View style={styles.featuredImage}>
-            <Ionicons name="star" size={32} color={colors.secondary} />
-            <Text style={styles.featuredLabel}>Featured</Text>
-          </View>
-          <View style={styles.featuredBody}>
-            <Text style={styles.featuredName}>{featured.name}</Text>
-            <View style={styles.featuredCostRow}>
-              <Ionicons name="diamond" size={13} color={colors.primary} />
-              <Text style={styles.featuredCost}>{featured.tokenCost.toLocaleString()} ECO</Text>
+        {featured && (
+          <View style={styles.featuredCard}>
+            <View style={styles.featuredImage}>
+              <Ionicons name="star" size={32} color={colors.secondary} />
+              <Text style={styles.featuredLabel}>Featured</Text>
             </View>
-            <TouchableOpacity
-              style={styles.featuredBtn}
-              onPress={() => handleRedeem(featured.id)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.featuredBtnText}>Redeem</Text>
-            </TouchableOpacity>
+            <View style={styles.featuredBody}>
+              <Text style={styles.featuredName}>{featured.name}</Text>
+              <View style={styles.featuredCostRow}>
+                <Ionicons name="diamond" size={13} color={colors.primary} />
+                <Text style={styles.featuredCost}>{featured.eco_cost.toLocaleString()} ECO</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.featuredBtn}
+                onPress={() => handleRedeem(featured.id)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.featuredBtnText}>Redeem</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+        )}
+
+        <View style={styles.grid}>
+          {filtered.map((reward) => (
+            <View key={reward.id} style={styles.gridItem}>
+              <RewardCard reward={reward} onRedeem={handleRedeem} />
+            </View>
+          ))}
         </View>
-      )}
 
-      {/* Reward grid */}
-      <View style={styles.grid}>
-        {filtered.map((reward) => (
-          <View key={reward.id} style={styles.gridItem}>
-            <RewardCard reward={reward} onRedeem={handleRedeem} />
-          </View>
-        ))}
-      </View>
-
-      {/* Redeem modal */}
-      <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            {errorMsg ? (
-              <>
-                <Ionicons name="close-circle" size={48} color={colors.error} />
-                <Text style={styles.modalTitle}>Insufficient ECO</Text>
-                <Text style={styles.modalSubtitle}>{errorMsg}</Text>
-                <TouchableOpacity
-                  style={styles.modalBtn}
-                  onPress={() => { setModalVisible(false); setErrorMsg(''); }}
-                >
-                  <Text style={styles.modalBtnText}>Done</Text>
-                </TouchableOpacity>
-              </>
-            ) : redeemed ? (
-              <>
-                <TouchableOpacity
-                  style={styles.closeBtn}
-                  onPress={() => { setModalVisible(false); setRedeemed(false); }}
-                >
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
-                </TouchableOpacity>
-                <Text style={styles.modalSubtitle}>{selectedReward?.name}</Text>
-                <View style={styles.qrWrapper}>
-                  <QRCode
-                    value={`BESMART-${selectedReward?.id}-${mockUser.id}`}
-                    size={180}
-                    color={colors.textPrimary}
-                    backgroundColor={colors.secondary}
-                  />
-                </View>
-                <Text style={styles.qrHint}>Present this QR code to the partner to claim your reward.</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.modalTitle}>Redeem Reward?</Text>
-                <Text style={styles.modalSubtitle}>{selectedReward?.name}</Text>
-                <Text style={styles.modalCost}>{selectedReward?.tokenCost.toLocaleString()} ECO</Text>
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={styles.modalCancelBtn}
-                    onPress={() => setModalVisible(false)}
-                  >
-                    <Text style={styles.modalCancelText}>Cancel</Text>
+        {/* Redeem modal */}
+        <Modal visible={modalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              {errorMsg ? (
+                <>
+                  <Ionicons name="close-circle" size={48} color={colors.error} />
+                  <Text style={styles.modalTitle}>Redemption Failed</Text>
+                  <Text style={styles.modalSubtitle}>{errorMsg}</Text>
+                  <TouchableOpacity style={styles.modalBtn} onPress={() => { setModalVisible(false); setErrorMsg(''); }}>
+                    <Text style={styles.modalBtnText}>Done</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.modalBtn} onPress={confirmRedeem}>
-                    <Text style={styles.modalBtnText}>Confirm</Text>
+                </>
+              ) : redeemed ? (
+                <>
+                  <TouchableOpacity style={styles.closeBtn} onPress={() => { setModalVisible(false); setRedeemed(false); }}>
+                    <Ionicons name="close" size={22} color={colors.textSecondary} />
                   </TouchableOpacity>
-                </View>
-              </>
-            )}
+                  <Text style={styles.modalSubtitle}>{selectedReward?.name}</Text>
+                  <View style={styles.qrWrapper}>
+                    <QRCode
+                      value={`BESMART-REWARD-${redemptionId}`}
+                      size={180}
+                      color={colors.textPrimary}
+                      backgroundColor={colors.secondary}
+                    />
+                  </View>
+                  <Text style={styles.qrHint}>Present this QR code to the partner to claim your reward.</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.modalTitle}>Redeem Reward?</Text>
+                  <Text style={styles.modalSubtitle}>{selectedReward?.name}</Text>
+                  <Text style={styles.modalCost}>{selectedReward?.eco_cost?.toLocaleString()} ECO</Text>
+                  {balance < (selectedReward?.eco_cost ?? 0) && (
+                    <Text style={styles.insufficientText}>Insufficient ECO balance</Text>
+                  )}
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>
+                      <Text style={styles.modalCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, (submitting || balance < (selectedReward?.eco_cost ?? 0)) && { opacity: 0.6 }]}
+                      onPress={confirmRedeem}
+                      disabled={submitting || balance < (selectedReward?.eco_cost ?? 0)}
+                    >
+                      {submitting
+                        ? <ActivityIndicator color={colors.secondary} />
+                        : <Text style={styles.modalBtnText}>Confirm</Text>
+                      }
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-    </ScrollView>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  header: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 20,
-    gap: 6,
-  },
+  header: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20, gap: 6 },
   title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.secondary },
   subtitle: { fontSize: typography.size.sm, color: 'rgba(255,255,255,0.75)' },
   scroll: { flex: 1 },
   content: { padding: 20, gap: 18, paddingBottom: 40 },
-  featuredCard: {
-    backgroundColor: colors.secondary, borderRadius: 14, overflow: 'hidden',
-    borderWidth: 1, borderColor: colors.cardBorder,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
-  },
+  featuredCard: { backgroundColor: colors.secondary, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   featuredImage: { height: 100, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', gap: 6 },
   featuredLabel: { color: colors.secondary, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, letterSpacing: 1 },
   featuredBody: { padding: 14, gap: 8 },
@@ -195,6 +220,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.textPrimary, textAlign: 'center' },
   modalSubtitle: { fontSize: typography.size.base, color: colors.textSecondary, textAlign: 'center' },
   modalCost: { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.primary },
+  insufficientText: { fontSize: typography.size.sm, color: colors.error, fontWeight: typography.weight.medium },
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 8, width: '100%' },
   modalCancelBtn: { flex: 1, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   modalCancelText: { fontSize: typography.size.base, color: colors.textSecondary, fontWeight: typography.weight.medium },
