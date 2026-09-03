@@ -7,11 +7,23 @@ import { typography } from '../../theme/typography';
 import { mockUser } from '../../mock/data';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
 import InfoModal from '../../components/InfoModal';
+import { getUser } from '../../api';
 
 export default function ProfileScreen({ setIsAuthenticated }) {
   const [changePwVisible, setChangePwVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const [infoModal, setInfoModal] = useState(null);
+
+  // Use real logged-in user; fall back to mockUser for non-wired fields
+  const liveUser = getUser();
+  const user = {
+    ...mockUser,
+    id:       liveUser?.id       ?? mockUser.id,
+    name:     liveUser?.name     ?? mockUser.name,
+    email:    liveUser?.email    ?? mockUser.email,
+    phone:    liveUser?.phone    ?? mockUser.phone,
+    barangay: liveUser?.barangay ?? mockUser.barangay,
+  };
 
   const settingsItems = [
     { icon: 'lock-closed-outline',        label: 'Change Password', onPress: () => setChangePwVisible(true) },
@@ -127,11 +139,11 @@ export default function ProfileScreen({ setIsAuthenticated }) {
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.qrModalName}>{mockUser.name}</Text>
-            <Text style={styles.qrModalBarangay}>{mockUser.barangay}</Text>
+            <Text style={styles.qrModalName}>{user.name}</Text>
+            <Text style={styles.qrModalBarangay}>{user.barangay}</Text>
             <View style={styles.qrCodeWrap}>
               <QRCode
-                value={`BESMART-RESIDENT-${mockUser.id}`}
+                value={`BESMART-RESIDENT-${user.id}`}
                 size={200}
                 color={colors.textPrimary}
                 backgroundColor={colors.secondary}
@@ -139,7 +151,7 @@ export default function ProfileScreen({ setIsAuthenticated }) {
             </View>
             <View style={styles.qrIdRow}>
               <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.qrIdText}>ID: {mockUser.id}</Text>
+              <Text style={styles.qrIdText}>ID: {user.id}</Text>
             </View>
             <Text style={styles.qrHint}>
               Show this QR code to the MRF staff to redeem your eco rewards.

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../theme/typography';
+import { setAuth } from '../api';
 
 // API base URL is set via EXPO_PUBLIC_API_URL in .env
 // Update .env when switching networks — do not hardcode the IP here.
@@ -94,8 +95,9 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Invalid email or password.'); setLoading(false); return; }
-      const { user } = data;
+      const { user, token } = data;
       if (!MOBILE_ROLES.includes(user.role)) { setError('This account does not have access to the mobile app.'); setLoading(false); return; }
+      setAuth(token, user);
       const appRole = ROLE_MAP[user.role] || user.role;
       setIsAuthenticated(true, appRole);
     } catch {
