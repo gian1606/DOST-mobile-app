@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -7,12 +7,13 @@ import { typography } from '../../theme/typography';
 import { mockUser } from '../../mock/data';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
 import InfoModal from '../../components/InfoModal';
-import { getUser } from '../../api';
+import { getUser, api } from '../../api';
 
 export default function ProfileScreen({ setIsAuthenticated }) {
   const [changePwVisible, setChangePwVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const [infoModal, setInfoModal] = useState(null);
+  const [ecoBalance, setEcoBalance] = useState(null);
 
   // Use real logged-in user; fall back to mockUser for non-wired fields
   const liveUser = getUser();
@@ -24,6 +25,13 @@ export default function ProfileScreen({ setIsAuthenticated }) {
     phone:    liveUser?.phone    ?? mockUser.phone,
     barangay: liveUser?.barangay ?? mockUser.barangay,
   };
+
+  // Fetch real ECO balance on mount
+  useEffect(() => {
+    api.get('/eco/balance')
+      .then((data) => setEcoBalance(Number(data.balance)))
+      .catch(() => {}); // silently fall back to mock if unreachable
+  }, []);
 
   const settingsItems = [
     { icon: 'lock-closed-outline',        label: 'Change Password', onPress: () => setChangePwVisible(true) },
@@ -55,7 +63,7 @@ export default function ProfileScreen({ setIsAuthenticated }) {
 
         <View style={styles.statsRow}>
           {[
-            { label: 'ECO Earned',     value: mockUser.totalEarned.toLocaleString() },
+            { label: 'ECO Earned',     value: (ecoBalance ?? mockUser.totalEarned).toLocaleString() },
             { label: 'Bins Reported',  value: mockUser.binsReported },
             { label: 'Items Redeemed', value: mockUser.itemsRedeemed },
           ].map((stat) => (
