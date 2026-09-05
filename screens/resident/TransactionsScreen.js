@@ -24,7 +24,7 @@ export default function TransactionsScreen() {
             (data.earned || []).map((t) => ({
               id:          t.id,
               type:        'earned',
-              title:       `${t.title} · ${t.weight_kg} kg`,
+              title:       t.weight_kg ? `${t.title} · ${t.weight_kg} kg` : t.title,
               description: t.tx_hash ? `tx: ${t.tx_hash.slice(0, 16)}...` : '',
               dateTime:    new Date(t.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
               amount:      t.amount,
