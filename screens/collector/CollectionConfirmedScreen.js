@@ -6,7 +6,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../theme/typography';
 import { mockCollectorUser, mockCollectorBins } from '../../mock/data';
-
 const C = {
   primary:  '#0D7A5F',
   primaryLt:'#1A9E7A',
@@ -74,11 +73,21 @@ function MiniMap({ confirmedBin }) {
 }
 
 export default function CollectionConfirmedScreen({ navigation, route }) {
+  // result comes from the API response via CollectorQRScannerScreen
+  const apiResult = route?.params?.result;
+  // Fall back to mock bin for display if no API result (shouldn't happen in production)
   const bin = route?.params?.bin || mockCollectorBins[2];
   const [weightModalVisible, setWeightModalVisible] = useState(false);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  // Use API data when available
+  const binName     = apiResult?.bin_id    ? `Bin ${apiResult.bin_id.slice(0, 8)}…` : bin.name;
+  const binStreet   = bin.street || '';
+  const binBarangay = bin.barangay || '';
+  const residentName = apiResult?.resident_name ?? '—';
+  const ecoAwarded   = apiResult?.eco_awarded ?? 0;
 
   return (
     <View style={styles.screen}>
@@ -95,7 +104,8 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
 
         <Text style={styles.heading}>Garbage Collected!</Text>
         <Text style={styles.subheading}>
-          <Text style={styles.binHighlight}>{bin.name}</Text> on {bin.street} has been marked as{' '}
+          <Text style={styles.binHighlight}>{binName}</Text>
+          {binStreet ? ` on ${binStreet}` : ''} has been marked as{' '}
           <Text style={styles.collectedHighlight}>COLLECTED.</Text>
         </Text>
 
@@ -107,10 +117,10 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
               <Text style={styles.recordedText}>Recorded</Text>
             </View>
           </View>
-          <LogRow label="Bin ID"        value={bin.id} />
-          <LogRow label="Location"      value={`${bin.street}, ${bin.barangay.replace('Brgy. Kumintang Ibaba', 'Brgy. K.I.')}`} />
-          <LogRow label="Collected by"  value={mockCollectorUser.name} />
-          <LogRow label="Time"          value={timeStr} />
+          <LogRow label="Collected by"   value={mockCollectorUser.name} />
+          <LogRow label="Resident"       value={residentName} />
+          <LogRow label="ECO Awarded"    value={`+${ecoAwarded} ECO`} />
+          <LogRow label="Time"           value={timeStr} />
           <View style={styles.logRow}>
             <Text style={styles.logLabel}>Status</Text>
             <View style={styles.statusRow}>
