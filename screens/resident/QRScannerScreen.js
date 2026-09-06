@@ -92,7 +92,7 @@ export default function QRScannerScreen() {
       <CameraView
         style={styles.camera}
         facing="back"
-        flash={flashOn ? 'torch' : undefined}
+        enableTorch={flashOn}
         onCameraReady={() => console.log('[CAMERA] Ready')}
         onMountError={(e) => console.log('[CAMERA] Mount error:', e.message)}
         onBarcodeScanned={scanning && !loading && !successVisible ? handleBarCodeScanned : undefined}

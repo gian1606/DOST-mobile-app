@@ -83,7 +83,7 @@ export default function CollectorQRScannerScreen({ navigation }) {
       <CameraView
         style={styles.camera}
         facing="back"
-        flash={flashOn ? 'torch' : undefined}
+        enableTorch={flashOn}
         onBarcodeScanned={active && !loading ? handleBarCodeScanned : undefined}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       />

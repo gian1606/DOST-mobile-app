@@ -62,7 +62,7 @@ export default function QRScannerScreen() {
       <CameraView
         style={styles.camera}
         facing="back"
-        flash={flashOn ? 'torch' : undefined}
+        enableTorch={flashOn}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       />
 
