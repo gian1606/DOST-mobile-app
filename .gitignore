@@ -43,3 +43,4 @@ yarn-error.*
 
 # EAS — each developer configures their own
 eas.json
+app.json
