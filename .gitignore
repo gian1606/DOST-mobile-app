@@ -41,6 +41,3 @@ yarn-error.*
 /ios
 /android
 
-# EAS — each developer configures their own
-eas.json
-app.json
