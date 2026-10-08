@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { typography } from '../../theme/typography';
-import { api } from '../../api';
 
 const C = { primary: '#0D7A5F' };
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
@@ -18,8 +17,6 @@ export default function CollectorQRScannerScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [flashOn, setFlashOn]           = useState(false);
   const [active, setActive]             = useState(true);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState('');
 
   const isFocused = useIsFocused();
   const appState  = useRef(AppState.currentState);
@@ -33,20 +30,12 @@ export default function CollectorQRScannerScreen({ navigation }) {
     return () => sub.remove();
   }, []);
 
-  async function handleBarCodeScanned({ data }) {
-    if (!active || loading) return;
+  function handleBarCodeScanned({ data }) {
+    if (!active) return;
     setActive(false);
-    setLoading(true);
-    setError('');
-    try {
-      const response = await api.post('/bins/collection-confirm', { qr_payload: data });
-      navigation.replace('CollectionConfirmed', { result: response });
-    } catch (err) {
-      setError(err.message || 'Scan failed. Please try again.');
-      setTimeout(() => setActive(true), 1500);
-    } finally {
-      setLoading(false);
-    }
+    // Pass raw QR payload as binId — collection-confirm is called from
+    // BinPhotoScreen after the photo is analyzed.
+    navigation.replace('BinPhotoScreen', { binId: data });
   }
 
   if (!permission) {
@@ -84,7 +73,7 @@ export default function CollectorQRScannerScreen({ navigation }) {
         style={styles.camera}
         facing="back"
         enableTorch={flashOn}
-        onBarcodeScanned={active && !loading ? handleBarCodeScanned : undefined}
+        onBarcodeScanned={active ? handleBarCodeScanned : undefined}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       />
 
@@ -108,17 +97,7 @@ export default function CollectorQRScannerScreen({ navigation }) {
           </View>
           <Text style={styles.instruction}>Align QR code within the frame</Text>
           <Text style={styles.subInstruction}>Scan the bin's QR code to confirm collection</Text>
-          {loading && <ActivityIndicator color="#fff" style={{ marginTop: 8 }} />}
         </View>
-
-        {error ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{error}</Text>
-            <TouchableOpacity onPress={() => { setError(''); setActive(true); }}>
-              <Ionicons name="close" size={16} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        ) : null}
 
       </View>
 
@@ -149,7 +128,4 @@ const styles = StyleSheet.create({
 
   instruction:    { color: '#fff', fontSize: typography.size.base, fontWeight: '600', textAlign: 'center' },
   subInstruction: { color: 'rgba(255,255,255,0.65)', fontSize: typography.size.sm, textAlign: 'center', paddingHorizontal: 40 },
-
-  errorBanner:     { marginHorizontal: 20, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(220,38,38,0.9)', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 },
-  errorBannerText: { flex: 1, color: '#fff', fontSize: typography.size.sm },
 });

@@ -6,11 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../theme/typography';
-import { setAuth } from '../api';
-
-// API base URL is set via EXPO_PUBLIC_API_URL in .env
-// Update .env when switching networks — do not hardcode the IP here.
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { api, setAuth } from '../api';
 
 // Mobile app roles only — web admin roles are not allowed on the mobile app
 const MOBILE_ROLES = ['resident', 'mrf_worker', 'mrf_buyer', 'collector'];
@@ -88,20 +84,14 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
     setLoading(true);
     setError('');
     try {
-      const res  = await fetch(`${API_URL}/auth/login`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Invalid email or password.'); setLoading(false); return; }
+      const data = await api.post('/auth/login', { email: email.trim().toLowerCase(), password });
       const { user, token } = data;
       if (!MOBILE_ROLES.includes(user.role)) { setError('This account does not have access to the mobile app.'); setLoading(false); return; }
       setAuth(token, user);
       const appRole = ROLE_MAP[user.role] || user.role;
       setIsAuthenticated(true, appRole);
-    } catch {
-      setError('Unable to connect to the server. Please check your connection.');
+    } catch (err) {
+      setError(err.message || 'Unable to connect to the server. Please check your connection.');
       setLoading(false);
     }
   }

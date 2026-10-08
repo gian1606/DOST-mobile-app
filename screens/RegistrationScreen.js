@@ -6,7 +6,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../theme/typography';
+import { api, setAuth } from '../api';
 import { batangasBarangays } from '../mock/data';
+
+// Map registration role keys to DB role values
+const ROLE_DB_MAP = {
+  resident: 'resident',
+  buyer:    'mrf_buyer',
+};
+
+// Map DB role values to the navigation role keys used in App.js
+const ROLE_NAV_MAP = {
+  mrf_buyer: 'buyer',
+};
 
 const ROLES = [
   { key: 'resident', label: 'Resident',  description: 'Report bins & earn ECO',        icon: 'person-outline'   },
@@ -98,7 +110,7 @@ function BarangayPicker({ value, onChange }) {
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function RegistrationScreen({ navigation }) {
+export default function RegistrationScreen({ navigation, setIsAuthenticated }) {
   const [role, setRole]               = useState('');
   const [name, setName]               = useState('');
   const [email, setEmail]             = useState('');
@@ -109,13 +121,31 @@ export default function RegistrationScreen({ navigation }) {
   const [showPass, setShowPass]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError]             = useState('');
+  const [loading, setLoading]         = useState(false);
 
-  function handleRegister() {
-    if (!role)                                           { setError('Please select an account type.'); return; }
-    if (!name || !email || !phone || !barangay || !password) { setError('Please fill in all fields.'); return; }
-    if (password !== confirm)                            { setError('Passwords do not match.'); return; }
+  async function handleRegister() {
+    if (!role)                                                { setError('Please select an account type.'); return; }
+    if (!name || !email || !phone || !barangay || !password)  { setError('Please fill in all fields.'); return; }
+    if (password !== confirm)                                 { setError('Passwords do not match.'); return; }
     setError('');
-    navigation.navigate('OTP', { role });
+    setLoading(true);
+    try {
+      const data = await api.post('/auth/register', {
+        name:     name.trim(),
+        email:    email.trim().toLowerCase(),
+        phone:    phone.trim(),
+        barangay,
+        password,
+        role:     ROLE_DB_MAP[role],
+      });
+      const { token, user } = data;
+      setAuth(token, user);
+      const appRole = ROLE_NAV_MAP[user.role] || user.role;
+      setIsAuthenticated(true, appRole);
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+      setLoading(false);
+    }
   }
 
   return (
@@ -168,8 +198,8 @@ export default function RegistrationScreen({ navigation }) {
               rightSlot={<TouchableOpacity onPress={() => setShowConfirm((v) => !v)}><Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.55)" /></TouchableOpacity>}
             />
 
-            <TouchableOpacity style={styles.createBtn} onPress={handleRegister} activeOpacity={0.82}>
-              <Text style={styles.createBtnText}>Create Account</Text>
+            <TouchableOpacity style={[styles.createBtn, loading && { opacity: 0.7 }]} onPress={handleRegister} activeOpacity={0.82} disabled={loading}>
+              <Text style={styles.createBtnText}>{loading ? 'Creating account…' : 'Create Account'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.goBack()}>

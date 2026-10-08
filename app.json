@@ -37,6 +37,16 @@
         {
           "cameraPermission": "Allow BE SMART to access your camera to scan QR codes."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
       ]
     ],
     "extra": {

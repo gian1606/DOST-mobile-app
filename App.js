@@ -15,11 +15,13 @@ import RegistrationScreen from './screens/RegistrationScreen';
 import OTPScreen          from './screens/OTPScreen';
 
 // Resident screens
-import ResidentHome         from './screens/resident/HomeScreen';
-import ResidentRewards      from './screens/resident/RewardsScreen';
-import ResidentQRScanner    from './screens/resident/QRScannerScreen';
-import ResidentTransactions from './screens/resident/TransactionsScreen';
-import ResidentProfile      from './screens/resident/ProfileScreen';
+import ResidentHome            from './screens/resident/HomeScreen';
+import ResidentRewards         from './screens/resident/RewardsScreen';
+import ResidentQRScanner       from './screens/resident/QRScannerScreen';
+import ResidentBinPhoto        from './screens/resident/BinPhotoScreen';
+import ResidentTransactions    from './screens/resident/TransactionsScreen';
+import ResidentProfile         from './screens/resident/ProfileScreen';
+import ReportingConfirmed      from './screens/resident/ReportingConfirmedScreen';
 
 // MRF screens
 import MRFHome         from './screens/mrf/HomeScreen';
@@ -38,6 +40,7 @@ import BuyerProfile      from './screens/buyer/ProfileScreen';
 // Collector screens
 import CollectorHome         from './screens/collector/HomeScreen';
 import CollectorQRScanner    from './screens/collector/QRScannerScreen';
+import CollectorBinPhoto     from './screens/collector/BinPhotoScreen';
 import CollectionConfirmed   from './screens/collector/CollectionConfirmedScreen';
 import CollectorTransactions from './screens/collector/TransactionsScreen';
 import CollectorProfile      from './screens/collector/ProfileScreen';
@@ -45,6 +48,7 @@ import CollectorRoute        from './screens/collector/RouteScreen';
 
 const Stack               = createStackNavigator();
 const Tab                 = createBottomTabNavigator();
+const ResidentRootStack   = createStackNavigator();
 const CollectorRootStack  = createStackNavigator();
 
 // ─── Shared tab navigator config ─────────────────────────────────────────────
@@ -91,18 +95,47 @@ const fabOptions = {
 };
 
 // ─── Resident tabs ────────────────────────────────────────────────────────────
-function ResidentTabs({ setIsAuthenticated }) {
+function ResidentTabNavigator({ setIsAuthenticated }) {
   return (
     <Tab.Navigator screenOptions={tabScreenOptions}>
       <Tab.Screen name="Home"         component={ResidentHome} />
       <Tab.Screen name="Rewards"      component={ResidentRewards} />
-      <Tab.Screen name="QR"           component={ResidentQRScanner} options={fabOptions} />
+      <Tab.Screen
+        name="QR"
+        component={ResidentHome}
+        options={{
+          ...fabOptions,
+          tabBarButton: (props) => (
+            <TouchableOpacity {...props} style={styles.fabWrapper} activeOpacity={0.85} />
+          ),
+        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('ResidentQRScreen');
+          },
+        })}
+      />
       <Tab.Screen name="Transactions" component={ResidentTransactions} />
       <Tab.Screen
         name="Profile"
         children={() => <ResidentProfile setIsAuthenticated={setIsAuthenticated} />}
       />
     </Tab.Navigator>
+  );
+}
+
+// Root stack wraps resident tabs + QR scanner + BinPhoto + ReportingConfirmed
+function ResidentTabs({ setIsAuthenticated }) {
+  return (
+    <ResidentRootStack.Navigator screenOptions={{ headerShown: false }}>
+      <ResidentRootStack.Screen name="ResidentTabsMain">
+        {() => <ResidentTabNavigator setIsAuthenticated={setIsAuthenticated} />}
+      </ResidentRootStack.Screen>
+      <ResidentRootStack.Screen name="ResidentQRScreen"    component={ResidentQRScanner} />
+      <ResidentRootStack.Screen name="ResidentBinPhoto"    component={ResidentBinPhoto} />
+      <ResidentRootStack.Screen name="ReportingConfirmed"  component={ReportingConfirmed} />
+    </ResidentRootStack.Navigator>
   );
 }
 
@@ -231,6 +264,7 @@ function CollectorTabs({ setIsAuthenticated }) {
         {() => <CollectorTabNavigator setIsAuthenticated={setIsAuthenticated} />}
       </CollectorRootStack.Screen>
       <CollectorRootStack.Screen name="CollectorQRScreen"   component={CollectorQRScanner} />
+      <CollectorRootStack.Screen name="BinPhotoScreen"      component={CollectorBinPhoto} />
       <CollectorRootStack.Screen name="CollectionConfirmed" component={CollectionConfirmed} />
     </CollectorRootStack.Navigator>
   );

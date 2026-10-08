@@ -1,28 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, Modal, ActivityIndicator, AppState, Dimensions,
+  StyleSheet, ActivityIndicator, AppState, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { api } from '../../api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
 const CORNER_SIZE  = 22;
 const CORNER_WIDTH = 3;
 
-export default function QRScannerScreen() {
+export default function QRScannerScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [flashOn, setFlashOn]           = useState(false);
   const [scanning, setScanning]         = useState(true);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState('');
-  const [result, setResult]             = useState(null);
-  const [successVisible, setSuccessVisible] = useState(false);
 
   const isFocused = useIsFocused();
   const appState  = useRef(AppState.currentState);
@@ -36,28 +31,12 @@ export default function QRScannerScreen() {
     return () => sub.remove();
   }, []);
 
-  async function handleBarCodeScanned({ data }) {
-    if (!scanning || loading) return;
+  function handleBarCodeScanned({ data }) {
+    if (!scanning) return;
     setScanning(false);
-    setLoading(true);
-    setError('');
-    try {
-      const response = await api.post('/bins/scan-report', { qr_payload: data });
-      setResult(response);
-      setSuccessVisible(true);
-    } catch (err) {
-      setError(err.message || 'Scan failed. Please try again.');
-      setTimeout(() => setScanning(true), 1500);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleDone() {
-    setSuccessVisible(false);
-    setResult(null);
-    setError('');
-    setScanning(true);
+    // Navigate to BinPhotoScreen — resident takes a photo for AI verification
+    // before the scan-report API call is made.
+    navigation.replace('ResidentBinPhoto', { binId: data });
   }
 
   if (!permission) {
@@ -95,12 +74,11 @@ export default function QRScannerScreen() {
         enableTorch={flashOn}
         onCameraReady={() => console.log('[CAMERA] Ready')}
         onMountError={(e) => console.log('[CAMERA] Mount error:', e.message)}
-        onBarcodeScanned={scanning && !loading && !successVisible ? handleBarCodeScanned : undefined}
+        onBarcodeScanned={scanning ? handleBarCodeScanned : undefined}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       />
 
-      {!successVisible && (
-        <View style={styles.overlay} pointerEvents="box-none">
+      <View style={styles.overlay} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.flashBtn}
             onPress={() => setFlashOn(!flashOn)}
@@ -118,48 +96,9 @@ export default function QRScannerScreen() {
             </View>
             <Text style={styles.instruction}>Align QR code within the frame</Text>
             <Text style={styles.subInstruction}>Scan a bin's QR code to earn ECO</Text>
-            {loading && <ActivityIndicator color="#fff" style={{ marginTop: 8 }} />}
           </View>
 
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
-              <TouchableOpacity onPress={() => setError('')}>
-                <Ionicons name="close" size={16} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
         </View>
-      )}
-
-      <Modal visible={successVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
-            <Text style={styles.modalTitle}>Bin Reported!</Text>
-            <Text style={styles.modalSubtitle}>
-              <Text style={{ fontWeight: typography.weight.bold, color: colors.textPrimary }}>
-                {result?.bin?.name}
-              </Text>
-              {result?.bin?.street ? ` on ${result.bin.street}` : ''} has been reported.
-            </Text>
-            <View style={styles.ecoPreviewBox}>
-              <Ionicons name="diamond" size={18} color={colors.primary} />
-              <Text style={styles.ecoPreviewText}>
-                You'll earn{' '}
-                <Text style={{ fontWeight: typography.weight.bold, color: colors.primary }}>
-                  +{result?.bin?.eco_reward ?? '?'} ECO
-                </Text>
-                {' '}when the collector picks this up.
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.8}>
-              <Text style={styles.doneBtnText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
     </View>
   );
@@ -187,16 +126,4 @@ const styles = StyleSheet.create({
 
   instruction:    { color: '#fff', fontSize: typography.size.base, fontWeight: typography.weight.semibold, textAlign: 'center' },
   subInstruction: { color: 'rgba(255,255,255,0.65)', fontSize: typography.size.sm, textAlign: 'center', paddingHorizontal: 40 },
-
-  errorBanner:     { marginHorizontal: 20, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(220,38,38,0.9)', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 },
-  errorBannerText: { flex: 1, color: '#fff', fontSize: typography.size.sm },
-
-  modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalCard:      { backgroundColor: colors.secondary, borderRadius: 18, padding: 28, width: '100%', alignItems: 'center', gap: 14 },
-  modalTitle:     { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.textPrimary },
-  modalSubtitle:  { fontSize: typography.size.base, color: colors.textSecondary, textAlign: 'center' },
-  ecoPreviewBox:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.successLight, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#A5D6A7', width: '100%' },
-  ecoPreviewText: { flex: 1, fontSize: typography.size.sm, color: colors.textPrimary, lineHeight: 20 },
-  doneBtn:        { backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 14, width: '100%', alignItems: 'center' },
-  doneBtnText:    { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },
 });

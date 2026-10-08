@@ -26,7 +26,10 @@ export function getToken() {
 }
 
 async function request(method, path, body) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+  };
   if (_token) headers['Authorization'] = `Bearer ${_token}`;
 
   const res = await fetch(`${BASE_URL}${path}`, {
