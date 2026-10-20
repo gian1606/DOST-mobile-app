@@ -3,8 +3,8 @@ import {
   Modal, FlatList, StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
 
 // icon + color per notification type
 const TYPE_CONFIG = {
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   rowUnread: {
     backgroundColor: colors.successLight,
-    borderColor: '#A5D6A7',
+    borderColor: colors.successBorder,
   },
   iconWrap: {
     width: 38,

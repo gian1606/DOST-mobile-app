@@ -4,9 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockBuyerUser, mockMRFLocations, mockPartnerAds, mockBuyerNotifications } from '../../mock/data';
-import MRFMapCard from '../../components/MRFMapCard';
-import AdCard from '../../components/AdCard';
-import NotificationsModal from '../../components/NotificationsModal';
+import MRFMapCard from '../../components/mrf/MRFMapCard';
+import AdCard from '../../components/shared/AdCard';
+import NotificationsModal from '../../components/modals/NotificationsModal';
+import { ROUTES } from '../../navigation/routes';
 
 export default function HomeScreen({ navigation }) {
   const [notifVisible, setNotifVisible] = useState(false);
@@ -44,7 +45,7 @@ export default function HomeScreen({ navigation }) {
         {/* Reservations shortcut */}
         <TouchableOpacity
           style={styles.reservationCard}
-          onPress={() => navigation.navigate('Reservations')}
+          onPress={() => navigation.navigate(ROUTES.RESERVATIONS)}
           activeOpacity={0.85}
         >
           <View style={styles.reservationLeft}>

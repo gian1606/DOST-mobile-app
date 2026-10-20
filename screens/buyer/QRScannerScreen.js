@@ -102,7 +102,7 @@ export default function QRScannerScreen() {
 const styles = StyleSheet.create({
   screen:         { flex: 1, backgroundColor: '#000' },
   camera:         { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT },
-  centeredScreen: { flex: 1, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
+  centeredScreen: { flex: 1, backgroundColor: colors.cameraBg, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
   permissionText: { color: '#fff', fontSize: typography.size.base, fontWeight: typography.weight.semibold, textAlign: 'center' },
   permissionSub:  { color: 'rgba(255,255,255,0.55)', fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 },
   grantBtn:       { marginTop: 16, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },

@@ -1,7 +1,3 @@
-// ─── Mock credentials (role determined by login) ───────────────────────────
-// resident@besmart.ph / resident123  → role: 'resident'
-// mrf@besmart.ph      / mrf123       → role: 'mrf'
-
 // ─── Resident ───────────────────────────────────────────────────────────────
 export const mockUser = {
   id: 'user-001',

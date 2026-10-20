@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { ROUTES } from '../navigation/routes';
 
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace('Login');
+      navigation.replace(ROUTES.LOGIN);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);

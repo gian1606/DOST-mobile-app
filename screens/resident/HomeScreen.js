@@ -5,25 +5,27 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockPartnerAds, mockMapData, mockMRFLocations, mockResidentNotifications } from '../../mock/data';
-import MapCard from '../../components/MapCard';
-import EcoTokenBadge from '../../components/EcoTokenBadge';
-import AdCard from '../../components/AdCard';
-import NotificationsModal from '../../components/NotificationsModal';
-import { api, getUser } from '../../api';
+import MapCard from '../../components/resident/MapCard';
+import EcoTokenBadge from '../../components/shared/EcoTokenBadge';
+import AdCard from '../../components/shared/AdCard';
+import NotificationsModal from '../../components/modals/NotificationsModal';
+import { fetchBalance } from '../../services/eco';
+import { useAuth } from '../../context/AuthContext';
+import { ROUTES } from '../../navigation/routes';
 
 export default function HomeScreen({ navigation }) {
+  const { user } = useAuth();
   const [notifVisible, setNotifVisible] = useState(false);
   const [balance, setBalance]           = useState(null);
   const [balanceLoading, setBalanceLoading] = useState(true);
   const unread = mockResidentNotifications.filter((n) => !n.read).length;
-  const user   = getUser();
 
   // Refresh balance every time this screen comes into focus
   useFocusEffect(
     useCallback(() => {
       setBalanceLoading(true);
-      api.get('/eco/balance')
-        .then((data) => setBalance(Number(data.balance)))
+      fetchBalance()
+        .then((bal) => setBalance(bal))
         .catch(() => setBalance(0))
         .finally(() => setBalanceLoading(false));
     }, [])
@@ -62,7 +64,7 @@ export default function HomeScreen({ navigation }) {
           : <EcoTokenBadge
               variant="card"
               balance={balance ?? 0}
-              onViewRewards={() => navigation.navigate('Rewards')}
+              onViewRewards={() => navigation.navigate(ROUTES.REWARDS)}
             />
         }
 

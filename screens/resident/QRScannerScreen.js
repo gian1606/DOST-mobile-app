@@ -8,7 +8,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { api } from '../../api';
+import { reportBinScan } from '../../services/bins';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
@@ -42,7 +42,7 @@ export default function QRScannerScreen() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.post('/bins/scan-report', { qr_payload: data });
+      const response = await reportBinScan(data);
       setResult(response);
       setSuccessVisible(true);
     } catch (err) {
@@ -93,8 +93,6 @@ export default function QRScannerScreen() {
         style={styles.camera}
         facing="back"
         enableTorch={flashOn}
-        onCameraReady={() => console.log('[CAMERA] Ready')}
-        onMountError={(e) => console.log('[CAMERA] Mount error:', e.message)}
         onBarcodeScanned={scanning && !loading && !successVisible ? handleBarCodeScanned : undefined}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       />
@@ -168,7 +166,7 @@ export default function QRScannerScreen() {
 const styles = StyleSheet.create({
   screen:         { flex: 1, backgroundColor: '#000' },
   camera:         { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT },
-  centeredScreen: { flex: 1, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
+  centeredScreen: { flex: 1, backgroundColor: colors.cameraBg, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
   permissionText: { color: '#fff', fontSize: typography.size.base, fontWeight: typography.weight.semibold, textAlign: 'center' },
   permissionSub:  { color: 'rgba(255,255,255,0.55)', fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 },
   grantBtn:       { marginTop: 16, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
@@ -195,7 +193,7 @@ const styles = StyleSheet.create({
   modalCard:      { backgroundColor: colors.secondary, borderRadius: 18, padding: 28, width: '100%', alignItems: 'center', gap: 14 },
   modalTitle:     { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.textPrimary },
   modalSubtitle:  { fontSize: typography.size.base, color: colors.textSecondary, textAlign: 'center' },
-  ecoPreviewBox:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.successLight, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#A5D6A7', width: '100%' },
+  ecoPreviewBox:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.successLight, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.successBorder, width: '100%' },
   ecoPreviewText: { flex: 1, fontSize: typography.size.sm, color: colors.textPrimary, lineHeight: 20 },
   doneBtn:        { backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 14, width: '100%', alignItems: 'center' },
   doneBtnText:    { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },

@@ -4,7 +4,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors'; // eslint-disable-line no-unused-vars
+import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
   mockCollectorUser,
@@ -12,28 +12,15 @@ import {
   mockCollectorNotifications,
   mockPartnerAds,
 } from '../../mock/data';
-import NotificationsModal from '../../components/NotificationsModal';
-import AdCard from '../../components/AdCard';
+import NotificationsModal from '../../components/modals/NotificationsModal';
+import AdCard from '../../components/shared/AdCard';
 
-const C = {
-  primary:   '#0D7A5F',
-  primaryLt: '#1A9E7A',
-  primaryDk: '#095C47',
-  accent:    '#00E5A0',
-  bg:        '#F4FAF7',
-  surface:   '#FFFFFF',
-  textPri:   '#0D1F1A',
-  textSec:   '#6B8C81',
-  error:     '#E53535',
-  success:   '#00C86A',
-  warning:   '#F5A623',
-};
 
 function CollectorMapView({ bins }) {
   const statusColor = (s) => {
-    if (s === 'full')      return C.error;
-    if (s === 'collected') return C.success;
-    return C.warning;
+    if (s === 'full')      return colors.error;
+    if (s === 'collected') return colors.accent;
+    return colors.warning;
   };
 
   return (
@@ -82,9 +69,9 @@ function CollectorMapView({ bins }) {
       {/* Legend — top right */}
       <View style={mapStyles.legend}>
         {[
-          { color: C.error,   label: 'Full'       },
-          { color: C.success, label: 'Collected'  },
-          { color: C.warning, label: 'Missed'     },
+          { color: colors.error,   label: 'Full'       },
+          { color: colors.accent, label: 'Collected'  },
+          { color: colors.warning, label: 'Missed'     },
         ].map((item) => (
           <View key={item.label} style={mapStyles.legendRow}>
             <View style={[mapStyles.legendDot, { backgroundColor: item.color }]} />
@@ -154,7 +141,7 @@ export default function CollectorHomeScreen({ navigation }) {
 
         {/* ── Route Banner ── */}
         <View style={styles.routeBanner}>
-          <Ionicons name="navigate-outline" size={20} color={C.primary} />
+          <Ionicons name="navigate-outline" size={20} color={colors.collectorPrimary} />
           <View style={styles.routeInfo}>
             <Text style={styles.routeTitle}>Optimized Route Active</Text>
             <Text style={styles.routeSub}>
@@ -192,7 +179,7 @@ export default function CollectorHomeScreen({ navigation }) {
         visible={notifVisible}
         onClose={() => setNotifVisible(false)}
         notifications={mockCollectorNotifications}
-        accentColor="#0D7A5F"
+        accentColor={colors.collectorPrimary}
       />
     </View>
   );
@@ -202,12 +189,12 @@ export default function CollectorHomeScreen({ navigation }) {
 const mapStyles = StyleSheet.create({
   container: {
     height: 300,
-    backgroundColor: '#D6EAE0',
+    backgroundColor: colors.collectorSurface,
     borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#B2D8C8',
+    borderColor: colors.collectorBorder,
   },
   routeLine: {
     position: 'absolute',
@@ -215,7 +202,7 @@ const mapStyles = StyleSheet.create({
     left: '10%',
     right: '10%',
     height: 2,
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     opacity: 0.6,
   },
   markerWrapper: {
@@ -248,7 +235,7 @@ const mapStyles = StyleSheet.create({
   },
   labelText: {
     fontSize: 7,
-    color: C.textPri,
+    color: colors.textPrimary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -263,7 +250,7 @@ const mapStyles = StyleSheet.create({
   },
   legendRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot:  { width: 10, height: 10, borderRadius: 9999 },
-  legendText: { fontSize: 10, color: C.textPri, fontWeight: '500' },
+  legendText: { fontSize: 10, color: colors.textPrimary, fontWeight: '500' },
   satelliteBtn: {
     position: 'absolute',
     bottom: 10,
@@ -273,7 +260,7 @@ const mapStyles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  satelliteText: { fontSize: 12, color: C.textPri, fontWeight: '600' },
+  satelliteText: { fontSize: 12, color: colors.textPrimary, fontWeight: '600' },
   zoomControls: { position: 'absolute', bottom: 10, right: 10, gap: 4 },
   zoomBtn: {
     width: 32,
@@ -283,14 +270,14 @@ const mapStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  zoomText: { fontSize: 18, color: C.textPri, fontWeight: '600', lineHeight: 22 },
+  zoomText: { fontSize: 18, color: colors.textPrimary, fontWeight: '600', lineHeight: 22 },
 });
 
 // ─── Screen styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
+  screen: { flex: 1, backgroundColor: colors.collectorLight },
   header: {
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     paddingTop: 56,
     paddingBottom: 18,
     paddingHorizontal: 20,
@@ -308,11 +295,11 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 9999,
-    backgroundColor: C.error,
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: C.primary,
+    borderColor: colors.collectorPrimary,
   },
   bellBadgeText: { fontSize: 9, color: '#fff', fontWeight: '700' },
   scroll:  { flex: 1 },
@@ -320,46 +307,46 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: C.textPri,
+    color: colors.textPrimary,
   },
   adStack: { gap: 10 },
   adScroll: { marginHorizontal: -16 },
   routeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderRadius: 14,
     padding: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#B2D8C8',
-    shadowColor: C.primary,
+    borderColor: colors.collectorBorder,
+    shadowColor: colors.collectorPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 2,
   },
   routeInfo:  { flex: 1, gap: 2 },
-  routeTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: C.textPri },
-  routeSub:   { fontSize: typography.size.xs, color: C.textSec },
+  routeTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.textPrimary },
+  routeSub:   { fontSize: typography.size.xs, color: colors.textSecondary },
   goBtn: {
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   goBtnText: { color: '#fff', fontWeight: typography.weight.bold, fontSize: typography.size.sm },
   progressCard: {
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     padding: 14,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E0EDE8',
+    borderColor: colors.collectorBorder,
   },
   progressRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  progressLabel:   { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: C.textPri },
-  progressCount:   { fontSize: typography.size.sm, color: C.textSec },
-  progressBarBg:   { height: 8, backgroundColor: '#D6EAE0', borderRadius: 9999, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: C.primary, borderRadius: 9999 },
+  progressLabel:   { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.textPrimary },
+  progressCount:   { fontSize: typography.size.sm, color: colors.textSecondary },
+  progressBarBg:   { height: 8, backgroundColor: colors.collectorSurface, borderRadius: 9999, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: colors.collectorPrimary, borderRadius: 9999 },
 });

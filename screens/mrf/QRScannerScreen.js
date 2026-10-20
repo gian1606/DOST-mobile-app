@@ -8,7 +8,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { api, getToken } from '../../api';
+import { fetchWasteTypes, issueEco } from '../../services/eco';
 
 const CORNER_SIZE  = 22;
 const CORNER_WIDTH = 3;
@@ -41,11 +41,11 @@ export default function QRScannerScreen() {
   }, []);
 
   useEffect(() => {
-    api.get('/eco/waste-types')
+    fetchWasteTypes()
       .then((data) => { if (data && data.length > 0) setWasteTypes(data); })
       .catch(() => {
         setTimeout(() => {
-          api.get('/eco/waste-types')
+          fetchWasteTypes()
             .then((data) => { if (data && data.length > 0) setWasteTypes(data); })
             .catch(() => {});
         }, 2000);
@@ -75,9 +75,7 @@ export default function QRScannerScreen() {
     setError('');
     try {
       const payload = { qrValue: scannedQR, wasteTypeId: selectedWaste.id, weightKg };
-      console.log('[ECO ISSUE] payload:', JSON.stringify(payload));
-      console.log('[ECO ISSUE] token present:', !!getToken());
-      const data = await api.post('/eco/issue', payload);
+      const data = await issueEco(payload);
       setResult(data);
       setSuccessVisible(true);
     } catch (err) {
@@ -303,7 +301,7 @@ export default function QRScannerScreen() {
 const styles = StyleSheet.create({
   screen:         { flex: 1, backgroundColor: '#000' },
   camera:         { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT },
-  centeredScreen: { flex: 1, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
+  centeredScreen: { flex: 1, backgroundColor: colors.cameraBg, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
   permissionText: { color: '#fff', fontSize: typography.size.base, fontWeight: typography.weight.semibold, textAlign: 'center' },
   permissionSub:  { color: 'rgba(255,255,255,0.55)', fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 },
   grantBtn:       { marginTop: 16, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
@@ -327,7 +325,7 @@ const styles = StyleSheet.create({
   errorBannerText: { flex: 1, color: '#fff', fontSize: typography.size.sm },
 
   bottomSheet:    { backgroundColor: colors.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 14 },
-  residentCard:   { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.successLight, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#A5D6A7', gap: 12 },
+  residentCard:   { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.successLight, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.successBorder, gap: 12 },
   residentAvatar: { width: 44, height: 44, borderRadius: 9999, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   residentInfo:   { flex: 1, gap: 2 },
   residentName:   { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.textPrimary },

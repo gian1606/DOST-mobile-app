@@ -4,10 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockBuyerUser } from '../../mock/data';
-import ChangePasswordModal from '../../components/ChangePasswordModal';
-import InfoModal from '../../components/InfoModal';
+import ChangePasswordModal from '../../components/modals/ChangePasswordModal';
+import InfoModal from '../../components/modals/InfoModal';
+import { useAuth } from '../../context/AuthContext';
 
-export default function ProfileScreen({ setIsAuthenticated }) {
+export default function ProfileScreen() {
+  const { logout } = useAuth();
   const [changePwVisible, setChangePwVisible] = useState(false);
   const [infoModal, setInfoModal] = useState(null);
 
@@ -85,7 +87,7 @@ export default function ProfileScreen({ setIsAuthenticated }) {
 
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => setIsAuthenticated(false, null)}
+          onPress={() => logout()}
           activeOpacity={0.8}
         >
           <Ionicons name="log-out-outline" size={18} color={colors.error} />

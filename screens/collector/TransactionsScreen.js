@@ -8,17 +8,6 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockCollectorTransactions, mockCollectorUser } from '../../mock/data';
 
-const C = {
-  primary:  '#0D7A5F',
-  accent:   '#00E5A0',
-  bg:       '#F4FAF7',
-  surface:  '#FFFFFF',
-  textPri:  '#0D1F1A',
-  textSec:  '#6B8C81',
-  success:  '#00C86A',
-  error:    '#E53535',
-  warning:  '#F5A623',
-};
 
 const FILTER_TABS = ['All', 'Today', 'This Week'];
 
@@ -62,11 +51,11 @@ export default function CollectorTransactionsScreen() {
 
         {/* Summary row */}
         <View style={styles.summaryRow}>
-          <SummaryItem icon="checkmark-circle-outline" value={totalCollected} label="Collected" color={C.success} />
+          <SummaryItem icon="checkmark-circle-outline" value={totalCollected} label="Collected" color={colors.accent} />
           <View style={styles.summaryDivider} />
-          <SummaryItem icon="document-text-outline"   value={totalReported}  label="Reported"  color={C.primary} />
+          <SummaryItem icon="document-text-outline"   value={totalReported}  label="Reported"  color={colors.collectorPrimary} />
           <View style={styles.summaryDivider} />
-          <SummaryItem icon="scale-outline" value={`${totalVolume.toFixed(1)} L`} label="Total Volume" color={C.primary} />
+          <SummaryItem icon="scale-outline" value={`${totalVolume.toFixed(1)} L`} label="Total Volume" color={colors.collectorPrimary} />
         </View>
       </View>
 
@@ -79,7 +68,7 @@ export default function CollectorTransactionsScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="document-text-outline" size={40} color={C.textSec} />
+            <Ionicons name="document-text-outline" size={40} color={colors.textSecondary} />
             <Text style={styles.emptyText}>No collections found</Text>
           </View>
         }
@@ -100,7 +89,7 @@ function SummaryItem({ icon, value, label, color }) {
 
 function CollectionRow({ item }) {
   const isCollected = item.status === 'collected';
-  const statusColor = isCollected ? C.success : C.primary;
+  const statusColor = isCollected ? colors.accent : colors.collectorPrimary;
   const statusLabel = isCollected ? 'Collected' : 'Reported';
 
   return (
@@ -133,12 +122,12 @@ const rowStyles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     padding: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E0EDE8',
+    borderColor: colors.collectorBorder,
     marginBottom: 10,
   },
   iconWrap: {
@@ -149,9 +138,9 @@ const rowStyles = StyleSheet.create({
     alignItems: 'center',
   },
   info: { flex: 1, gap: 2 },
-  binName:  { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: C.textPri },
-  barangay: { fontSize: typography.size.xs, color: C.textSec },
-  time:     { fontSize: typography.size.xs, color: '#9BB5AC', marginTop: 2 },
+  binName:  { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.textPrimary },
+  barangay: { fontSize: typography.size.xs, color: colors.textSecondary },
+  time:     { fontSize: typography.size.xs, color: colors.collectorMuted, marginTop: 2 },
   right: { alignItems: 'flex-end', gap: 4 },
   badge: {
     borderRadius: 9999,
@@ -160,13 +149,13 @@ const rowStyles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeText: { fontSize: typography.size.xs, fontWeight: typography.weight.semibold },
-  weight: { fontSize: typography.size.xs, color: C.textSec, fontWeight: typography.weight.medium },
+  weight: { fontSize: typography.size.xs, color: colors.textSecondary, fontWeight: typography.weight.medium },
 });
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
+  screen: { flex: 1, backgroundColor: colors.collectorLight },
   header: {
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     padding: 20,
     paddingTop: 60,
     gap: 14,
@@ -184,7 +173,7 @@ const styles = StyleSheet.create({
   togglePill: { flex: 1, paddingVertical: 8, borderRadius: 9999, alignItems: 'center' },
   togglePillActive: { backgroundColor: '#fff' },
   toggleText: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: 'rgba(255,255,255,0.7)' },
-  toggleTextActive: { color: C.primary },
+  toggleTextActive: { color: colors.collectorPrimary },
   summaryRow: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0,0,0,0.15)',
@@ -197,5 +186,5 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: typography.size.xs, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
   list: { padding: 16, paddingBottom: 40 },
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: typography.size.base, color: C.textSec },
+  emptyText: { fontSize: typography.size.base, color: colors.textSecondary },
 });

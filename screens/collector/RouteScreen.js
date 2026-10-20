@@ -6,25 +6,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../theme/typography';
+import { colors } from '../../theme/colors';
 import { mockCollectorUser, mockCollectorBins } from '../../mock/data';
-import { api } from '../../api';
+import { submitCollectorReport } from '../../services/collector';
 
-const C = {
-  primary:  '#0D7A5F',
-  accent:   '#00E5A0',
-  bg:       '#F4FAF7',
-  surface:  '#FFFFFF',
-  textPri:  '#0D1F1A',
-  textSec:  '#6B8C81',
-  error:    '#E53535',
-  success:  '#00C86A',
-  warning:  '#F5A623',
-};
 
 const STATUS_CONFIG = {
-  full:      { color: C.error,   label: 'Full',      icon: 'alert-circle-outline'     },
-  collected: { color: C.success, label: 'Collected', icon: 'checkmark-circle-outline' },
-  missed:    { color: C.warning, label: 'Missed',    icon: 'close-circle-outline'     },
+  full:      { color: colors.error,   label: 'Full',      icon: 'alert-circle-outline'     },
+  collected: { color: colors.accent, label: 'Collected', icon: 'checkmark-circle-outline' },
+  missed:    { color: colors.warning, label: 'Missed',    icon: 'close-circle-outline'     },
 };
 
 const ISSUE_TYPES = [
@@ -68,11 +58,11 @@ export default function CollectorRouteScreen() {
     setSubmitting(true);
     setSubmitError('');
     try {
-      await api.post('/collector-reports', {
-        issue_type:       selectedIssue,
-        notes:            notes.trim() || null,
-        stops_completed:  collectedBins,
-        stops_total:      totalBins,
+      await submitCollectorReport({
+        issueType:       selectedIssue,
+        notes:           notes.trim() || null,
+        stopsCompleted:  collectedBins,
+        stopsTotal:      totalBins,
       });
       setReportVisible(false);
       setSuccessVisible(true);
@@ -116,11 +106,11 @@ export default function CollectorRouteScreen() {
           </View>
           <View style={styles.progressStats}>
             <View style={styles.progressStat}>
-              <View style={[styles.statDot, { backgroundColor: C.error }]} />
+              <View style={[styles.statDot, { backgroundColor: colors.error }]} />
               <Text style={styles.progressStatText}>{fullBins} remaining</Text>
             </View>
             <View style={styles.progressStat}>
-              <View style={[styles.statDot, { backgroundColor: C.success }]} />
+              <View style={[styles.statDot, { backgroundColor: colors.accent }]} />
               <Text style={styles.progressStatText}>{collectedBins} collected</Text>
             </View>
           </View>
@@ -167,17 +157,17 @@ export default function CollectorRouteScreen() {
             {/* Modal header */}
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
-                <Ionicons name="warning" size={20} color={C.error} />
+                <Ionicons name="warning" size={20} color={colors.error} />
                 <Text style={styles.modalTitle}>Report an Issue</Text>
               </View>
               <TouchableOpacity onPress={closeReport} disabled={submitting}>
-                <Ionicons name="close" size={22} color={C.textSec} />
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             {/* Progress context */}
             <View style={styles.progressBadge}>
-              <Ionicons name="location-outline" size={13} color={C.primary} />
+              <Ionicons name="location-outline" size={13} color={colors.collectorPrimary} />
               <Text style={styles.progressBadgeText}>
                 {collectedBins} of {totalBins} stops completed at time of report
               </Text>
@@ -259,7 +249,7 @@ export default function CollectorRouteScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.successSheet}>
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={48} color={C.success} />
+              <Ionicons name="checkmark-circle" size={48} color={colors.accent} />
             </View>
             <Text style={styles.successTitle}>Report Submitted</Text>
             <Text style={styles.successSub}>
@@ -280,11 +270,11 @@ export default function CollectorRouteScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
+  screen: { flex: 1, backgroundColor: colors.collectorLight },
 
   // ── Header ──
   header: {
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     paddingTop: 56,
     paddingBottom: 18,
     paddingHorizontal: 20,
@@ -299,7 +289,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: C.error,
+    backgroundColor: colors.error,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -310,12 +300,12 @@ const styles = StyleSheet.create({
 
   // ── Progress card ──
   progressCard: {
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderRadius: 14,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E0EDE8',
+    borderColor: colors.collectorBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -324,20 +314,20 @@ const styles = StyleSheet.create({
   },
   progressTop:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   progressLeft: { gap: 2 },
-  progressTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: C.textPri },
-  progressSub:   { fontSize: typography.size.xs, color: C.textSec },
-  progressPct:   { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: C.primary },
-  progressBarBg:   { height: 8, backgroundColor: '#D6EAE0', borderRadius: 9999, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: C.primary, borderRadius: 9999 },
+  progressTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.textPrimary },
+  progressSub:   { fontSize: typography.size.xs, color: colors.textSecondary },
+  progressPct:   { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.collectorPrimary },
+  progressBarBg:   { height: 8, backgroundColor: colors.collectorSurface, borderRadius: 9999, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: colors.collectorPrimary, borderRadius: 9999 },
   progressStats: { flexDirection: 'row', gap: 16 },
   progressStat:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statDot:       { width: 8, height: 8, borderRadius: 9999 },
-  progressStatText: { fontSize: typography.size.xs, color: C.textSec },
+  progressStatText: { fontSize: typography.size.xs, color: colors.textSecondary },
 
   sectionLabel: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: C.textPri,
+    color: colors.textPrimary,
     marginTop: 4,
   },
 
@@ -345,12 +335,12 @@ const styles = StyleSheet.create({
   stopCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     padding: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E0EDE8',
+    borderColor: colors.collectorBorder,
   },
   stepBadge: {
     width: 28, height: 28, borderRadius: 9999,
@@ -358,9 +348,9 @@ const styles = StyleSheet.create({
   },
   stepNumber:   { fontSize: typography.size.xs, fontWeight: typography.weight.bold, color: '#fff' },
   stopInfo:     { flex: 1, gap: 2 },
-  stopName:     { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: C.textPri },
-  stopBarangay: { fontSize: typography.size.xs, color: C.textSec },
-  stopReported: { fontSize: typography.size.xs, color: '#9BB5AC', marginTop: 1 },
+  stopName:     { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.textPrimary },
+  stopBarangay: { fontSize: typography.size.xs, color: colors.textSecondary },
+  stopReported: { fontSize: typography.size.xs, color: colors.collectorMuted, marginTop: 1 },
   statusPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderRadius: 9999, paddingHorizontal: 8, paddingVertical: 4,
@@ -375,7 +365,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -388,7 +378,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalTitle:    { fontSize: 18, fontWeight: '700', color: C.textPri },
+  modalTitle:    { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
 
   progressBadge: {
     flexDirection: 'row',
@@ -401,11 +391,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C8E6C9',
   },
-  progressBadgeText: { fontSize: 12, color: C.primary, fontWeight: '600' },
+  progressBadgeText: { fontSize: 12, color: colors.collectorPrimary, fontWeight: '600' },
 
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: C.textPri },
-  required:   { color: C.error },
-  optional:   { fontSize: 12, fontWeight: '400', color: C.textSec },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  required:   { color: colors.error },
+  optional:   { fontSize: 12, fontWeight: '400', color: colors.textSecondary },
 
   issueList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   issuePill: {
@@ -417,11 +407,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   issuePillSelected: {
-    borderColor: C.error,
+    borderColor: colors.error,
     backgroundColor: '#FFF5F5',
   },
-  issuePillText:         { fontSize: 13, color: C.textSec, fontWeight: '500' },
-  issuePillTextSelected: { color: C.error, fontWeight: '700' },
+  issuePillText:         { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+  issuePillTextSelected: { color: colors.error, fontWeight: '700' },
 
   notesInput: {
     borderWidth: 1.5,
@@ -429,12 +419,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
-    color: C.textPri,
+    color: colors.textPrimary,
     backgroundColor: '#F9FAFB',
     minHeight: 90,
   },
 
-  errorText: { fontSize: 13, color: C.error, textAlign: 'center' },
+  errorText: { fontSize: 13, color: colors.error, textAlign: 'center' },
 
   modalActions: { flexDirection: 'row', gap: 12 },
   cancelBtn: {
@@ -445,7 +435,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
   },
-  cancelBtnText: { fontSize: 14, fontWeight: '600', color: C.textSec },
+  cancelBtnText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   submitBtn: {
     flex: 2,
     flexDirection: 'row',
@@ -454,14 +444,14 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     paddingVertical: 13,
-    backgroundColor: C.error,
+    backgroundColor: colors.error,
   },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
   // ── Success Modal ──
   successSheet: {
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 32,
@@ -470,11 +460,11 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   successIcon:  { marginBottom: 4 },
-  successTitle: { fontSize: 20, fontWeight: '700', color: C.textPri },
-  successSub:   { fontSize: 14, color: C.textSec, textAlign: 'center', lineHeight: 20 },
+  successTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  successSub:   { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   successBtn: {
     marginTop: 8,
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 40,

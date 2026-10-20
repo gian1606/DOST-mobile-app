@@ -1,9 +1,9 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
 
-export default function MapCard({ mapData, mrfLocations = [] }) {
+export default function MRFMapCard({ mrfLocations }) {
   return (
     <View style={styles.card}>
       <View style={styles.mapBackground}>
@@ -16,36 +16,6 @@ export default function MapCard({ mapData, mrfLocations = [] }) {
           <View key={`v-${pos}`} style={[styles.gridLineV, { left: `${pos * 100}%` }]} />
         ))}
 
-        {/* Truck markers */}
-        {mapData.trucks.map((truck) => (
-          <View
-            key={truck.id}
-            style={[styles.markerWrapper, { left: `${truck.posX * 100}%`, top: `${truck.posY * 100}%` }]}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: '#F57C00' }]}>
-              <Ionicons name="bus" size={14} color="#fff" />
-            </View>
-            <View style={styles.label}>
-              <Text style={styles.labelText} numberOfLines={1}>{truck.label}</Text>
-            </View>
-          </View>
-        ))}
-
-        {/* Bin markers */}
-        {mapData.bins.map((bin) => (
-          <View
-            key={bin.id}
-            style={[styles.markerWrapper, { left: `${bin.posX * 100}%`, top: `${bin.posY * 100}%` }]}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: bin.status === 'full' ? colors.error : colors.primary }]}>
-              <Ionicons name="trash" size={13} color="#fff" />
-            </View>
-            <View style={styles.label}>
-              <Text style={styles.labelText} numberOfLines={1}>{bin.label}</Text>
-            </View>
-          </View>
-        ))}
-
         {/* MRF markers */}
         {mrfLocations.map((mrf) => (
           <View
@@ -53,7 +23,7 @@ export default function MapCard({ mapData, mrfLocations = [] }) {
             style={[styles.markerWrapper, { left: `${mrf.posX * 100}%`, top: `${mrf.posY * 100}%` }]}
           >
             <View style={[styles.iconCircle, { backgroundColor: mrf.status === 'full' ? colors.error : colors.primary }]}>
-              <Ionicons name="business" size={13} color="#fff" />
+              <Ionicons name="business" size={14} color="#fff" />
             </View>
             <View style={styles.label}>
               <Text style={styles.labelText} numberOfLines={1}>{mrf.name}</Text>
@@ -90,10 +60,9 @@ export default function MapCard({ mapData, mrfLocations = [] }) {
 
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-        <Text style={styles.footerText}>Batangas City — Live Waste Map</Text>
+        <Text style={styles.footerText}>Batangas City — MRF Facility Map</Text>
       </View>
     </View>
   );
@@ -121,16 +90,15 @@ const styles = StyleSheet.create({
   gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#C8E6C9' },
   gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#C8E6C9' },
 
-  // Marker: centered on posX/posY, offset so icon centre sits on the coordinate
   markerWrapper: {
     position: 'absolute',
     alignItems: 'center',
     width: 80,
-    marginLeft: -40, // centre the 80px wrapper on posX
+    marginLeft: -40,
   },
   iconCircle: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: 9999,
     justifyContent: 'center',
     alignItems: 'center',

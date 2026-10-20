@@ -4,8 +4,8 @@ import {
   Modal, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
 
 export default function ChangePasswordModal({ visible, onClose, accentColor }) {
   const accent = accentColor || colors.primary;

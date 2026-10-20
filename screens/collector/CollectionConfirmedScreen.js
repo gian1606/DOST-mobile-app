@@ -6,18 +6,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../theme/typography';
 import { mockCollectorUser, mockCollectorBins } from '../../mock/data';
-const C = {
-  primary:  '#0D7A5F',
-  primaryLt:'#1A9E7A',
-  accent:   '#00E5A0',
-  bg:       '#F4FAF7',
-  surface:  '#FFFFFF',
-  textPri:  '#0D1F1A',
-  textSec:  '#6B8C81',
-  success:  '#00C86A',
-  error:    '#E53535',
-  warning:  '#F5A623',
-};
+import { ROUTES } from '../../navigation/routes';
+import { colors } from '../../theme/colors';
 
 // Next bin after the confirmed one
 const nextBin = mockCollectorBins.find((b) => b.status === 'full' && b.id !== 'BIN-2024-A')
@@ -31,12 +21,12 @@ function MiniMap({ confirmedBin }) {
       {mockCollectorBins.map((bin) => {
         const isConfirmed = bin.id === confirmedBin?.id;
         const color = isConfirmed
-          ? C.success
+          ? colors.accent
           : bin.status === 'full'
-          ? C.error
+          ? colors.error
           : bin.status === 'collected'
-          ? C.success
-          : C.warning;
+          ? colors.accent
+          : colors.warning;
         return (
           <View
             key={bin.id}
@@ -47,7 +37,7 @@ function MiniMap({ confirmedBin }) {
                 top:  `${bin.posY * 100}%`,
                 backgroundColor: color,
                 borderWidth: isConfirmed ? 2.5 : 1.5,
-                borderColor: isConfirmed ? C.accent : '#fff',
+                borderColor: isConfirmed ? colors.collectorAccent : '#fff',
                 width: isConfirmed ? 20 : 14,
                 height: isConfirmed ? 20 : 14,
                 marginLeft: isConfirmed ? -10 : -7,
@@ -124,7 +114,7 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
           <View style={styles.logRow}>
             <Text style={styles.logLabel}>Status</Text>
             <View style={styles.statusRow}>
-              <View style={[styles.statusDot, { backgroundColor: C.success }]} />
+              <View style={[styles.statusDot, { backgroundColor: colors.accent }]} />
               <Text style={styles.statusValue}>Collected</Text>
             </View>
           </View>
@@ -132,7 +122,7 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
 
         {/* Next bin banner */}
         <View style={styles.nextBinBanner}>
-          <Ionicons name="navigate-outline" size={18} color={C.primary} />
+          <Ionicons name="navigate-outline" size={18} color={colors.collectorPrimary} />
           <View style={styles.nextBinInfo}>
             <Text style={styles.nextBinTitle}>Next: {nextBin.name} — {nextBin.street}</Text>
             <Text style={styles.nextBinSub}>1.2 km · ~5 min drive</Text>
@@ -146,14 +136,14 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.viewRouteBtn}
-            onPress={() => navigation.navigate('CollectorTabsMain')}
+            onPress={() => navigation.navigate(ROUTES.COLLECTOR_TABS)}
             activeOpacity={0.8}
           >
             <Text style={styles.viewRouteBtnText}>View Route</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.nextBinBtn}
-            onPress={() => navigation.navigate('CollectorQRScreen')}
+            onPress={() => navigation.navigate(ROUTES.COLLECTOR_QR_SCREEN)}
             activeOpacity={0.85}
           >
             <Text style={styles.nextBinBtnText}>Next Bin</Text>
@@ -169,7 +159,7 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
         onClose={() => setWeightModalVisible(false)}
         onSubmit={() => {
           setWeightModalVisible(false);
-          navigation.navigate('CollectorTabsMain');
+          navigation.navigate(ROUTES.COLLECTOR_TABS);
         }}
         barangay={bin.barangay}
       />
@@ -270,12 +260,12 @@ function WeightInputModal({ visible, onClose, onSubmit, barangay }) {
 const miniMapStyles = StyleSheet.create({
   container: {
     height: 160,
-    backgroundColor: '#D6EAE0',
+    backgroundColor: colors.collectorSurface,
     borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#B2D8C8',
+    borderColor: colors.collectorBorder,
   },
   routeLine: {
     position: 'absolute',
@@ -283,7 +273,7 @@ const miniMapStyles = StyleSheet.create({
     left: '8%',
     right: '8%',
     height: 2,
-    backgroundColor: '#0D7A5F',
+    backgroundColor: colors.collectorPrimary,
     opacity: 0.5,
   },
   dot: {
@@ -320,7 +310,7 @@ const wStyles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
@@ -328,13 +318,13 @@ const wStyles = StyleSheet.create({
     paddingBottom: 36,
   },
   header: { alignItems: 'center', gap: 4 },
-  title: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: C.textPri },
-  sub:   { fontSize: typography.size.xs, color: C.textSec },
+  title: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.textPrimary },
+  sub:   { fontSize: typography.size.xs, color: colors.textSecondary },
   displayBox: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    backgroundColor: C.bg,
+    backgroundColor: colors.collectorLight,
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -345,14 +335,14 @@ const wStyles = StyleSheet.create({
   displayText: {
     fontSize: 48,
     fontWeight: '700',
-    color: C.textPri,
+    color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
     letterSpacing: 2,
   },
-  displayUnit: { fontSize: typography.size.lg, color: C.textSec, marginBottom: 8 },
+  displayUnit: { fontSize: typography.size.lg, color: colors.textSecondary, marginBottom: 8 },
   errorText: {
     fontSize: typography.size.xs,
-    color: C.error,
+    color: colors.error,
     textAlign: 'center',
     backgroundColor: '#FFEBEE',
     borderRadius: 8,
@@ -375,27 +365,27 @@ const wStyles = StyleSheet.create({
     borderColor: '#D8E8E2',
   },
   keyBackspace: { backgroundColor: '#FFE8E8', borderColor: '#FFCDD2' },
-  keyText: { fontSize: typography.size.lg, fontWeight: typography.weight.semibold, color: C.textPri },
-  keyBackspaceText: { color: C.error },
+  keyText: { fontSize: typography.size.lg, fontWeight: typography.weight.semibold, color: colors.textPrimary },
+  keyBackspaceText: { color: colors.error },
   confirmBtn: {
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     borderRadius: 9999,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: C.primary,
+    shadowColor: colors.collectorPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   confirmBtnText: { color: '#fff', fontWeight: typography.weight.bold, fontSize: typography.size.base },
-  skipText: { textAlign: 'center', color: C.textSec, fontSize: typography.size.sm, paddingVertical: 4 },
+  skipText: { textAlign: 'center', color: colors.textSecondary, fontSize: typography.size.sm, paddingVertical: 4 },
 });
 
 // ─── Screen styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.surface },
-  headerBar: { height: 56, backgroundColor: C.primary },
+  screen: { flex: 1, backgroundColor: colors.secondary },
+  headerBar: { height: 56, backgroundColor: colors.collectorPrimary },
   content: { padding: 20, gap: 16, alignItems: 'center' },
   iconWrap: { marginTop: 8 },
   iconCircle: {
@@ -411,25 +401,25 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
-    color: C.textPri,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   subheading: {
     fontSize: typography.size.base,
-    color: C.textSec,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
-  binHighlight:       { fontWeight: typography.weight.bold, color: C.textPri },
+  binHighlight:       { fontWeight: typography.weight.bold, color: colors.textPrimary },
   collectedHighlight: { fontWeight: typography.weight.bold, color: '#6C63FF' },
   logCard: {
     width: '100%',
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
     borderRadius: 16,
     padding: 16,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E0EDE8',
+    borderColor: colors.collectorBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -442,22 +432,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
-  logCardTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: C.textPri },
+  logCardTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.textPrimary },
   recordedBadge: {
     backgroundColor: '#E6F7F2',
     borderRadius: 9999,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#B2D8C8',
+    borderColor: colors.collectorBorder,
   },
-  recordedText: { fontSize: typography.size.xs, color: C.primary, fontWeight: typography.weight.semibold },
+  recordedText: { fontSize: typography.size.xs, color: colors.collectorPrimary, fontWeight: typography.weight.semibold },
   logRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logLabel:  { fontSize: typography.size.sm, color: C.textSec, flexShrink: 0 },
-  logValue:  { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: C.textPri, textAlign: 'right', flex: 1, marginLeft: 12 },
+  logLabel:  { fontSize: typography.size.sm, color: colors.textSecondary, flexShrink: 0 },
+  logValue:  { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.textPrimary, textAlign: 'right', flex: 1, marginLeft: 12 },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flex: 1, marginLeft: 12 },
   statusDot: { width: 8, height: 8, borderRadius: 9999, flexShrink: 0 },
-  statusValue: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: C.success },
+  statusValue: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.accent },
   nextBinBanner: {
     width: '100%',
     flexDirection: 'row',
@@ -467,11 +457,11 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#B2D8C8',
+    borderColor: colors.collectorBorder,
   },
   nextBinInfo: { flex: 1, gap: 2 },
-  nextBinTitle: { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: C.primary },
-  nextBinSub:   { fontSize: typography.size.xs, color: C.textSec },
+  nextBinTitle: { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.collectorPrimary },
+  nextBinSub:   { fontSize: typography.size.xs, color: colors.textSecondary },
   actionRow: { flexDirection: 'row', gap: 12, width: '100%' },
   viewRouteBtn: {
     flex: 1,
@@ -480,16 +470,16 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: C.surface,
+    backgroundColor: colors.secondary,
   },
-  viewRouteBtnText: { fontSize: typography.size.base, color: C.textPri, fontWeight: typography.weight.semibold },
+  viewRouteBtnText: { fontSize: typography.size.base, color: colors.textPrimary, fontWeight: typography.weight.semibold },
   nextBinBtn: {
     flex: 1,
-    backgroundColor: C.primary,
+    backgroundColor: colors.collectorPrimary,
     borderRadius: 9999,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: C.primary,
+    shadowColor: colors.collectorPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -7,8 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import MRFTransactionRow from '../../components/MRFTransactionRow';
-import { api } from '../../api';
+import MRFTransactionRow from '../../components/mrf/MRFTransactionRow';
+import { fetchMRFTransactions } from '../../services/eco';
 
 const FILTER_TABS = [
   { label: 'All',       value: 'all'   },
@@ -31,22 +31,8 @@ export default function TransactionsScreen() {
   function fetchTransactions(filter) {
     setLoading(true);
     setError('');
-    api.get(`/eco/mrf-transactions?filter=${filter}`)
-      .then((data) => setTransactions(
-        data.map((t) => ({
-          id:           t.id,
-          residentName: t.resident_name,
-          residentId:   t.resident_id,
-          wasteType:    t.waste_type,
-          weight:       `${t.weight_kg} kg`,
-          tokensAwarded: t.eco_awarded,
-          txHash:       t.tx_hash,
-          dateTime:     new Date(t.created_at).toLocaleString('en-PH', {
-            month: 'short', day: 'numeric', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-          }),
-        }))
-      ))
+    fetchMRFTransactions(filter)
+      .then((data) => setTransactions(data))
       .catch((err) => setError(err.message || 'Failed to load transactions.'))
       .finally(() => setLoading(false));
   }

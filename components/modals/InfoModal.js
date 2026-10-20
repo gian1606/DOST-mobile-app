@@ -3,8 +3,8 @@ import {
   Modal, StyleSheet, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
 
 // ─── About BE SMART content ───────────────────────────────────────────────────
 function AboutContent() {
