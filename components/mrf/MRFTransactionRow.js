@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
 
 export default function MRFTransactionRow({ transaction }) {
   return (
@@ -28,6 +28,6 @@ const styles = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   residentName: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.textPrimary },
   meta: { fontSize: typography.size.xs, color: colors.textSecondary },
-  tokenBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: '#A5D6A7' },
+  tokenBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: colors.successBorder },
   tokenText: { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.primary },
 });

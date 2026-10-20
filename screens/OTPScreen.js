@@ -6,11 +6,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { useAuth } from '../context/AuthContext';
+import { dbRoleToAppRole } from '../services/auth';
 
-export default function OTPScreen({ navigation, route, setIsAuthenticated }) {
-  const role = route?.params?.role || 'resident';
-  const [otp, setOtp] = useState(['', '', '', '']);
-  const [error, setError] = useState('');
+export default function OTPScreen({ navigation, route }) {
+  const { login } = useAuth();
+  const role  = route?.params?.role  || 'resident';
+  const token = route?.params?.token || null;
+  const user  = route?.params?.user  || null;
+  const [otp, setOtp]       = useState(['', '', '', '']);
+  const [error, setError]   = useState('');
   const [resent, setResent] = useState(false);
   const inputs = useRef([]);
 
@@ -37,9 +42,13 @@ export default function OTPScreen({ navigation, route, setIsAuthenticated }) {
       setError('Please enter the complete 4-digit OTP.');
       return;
     }
-    // Mock OTP — any 4 digits works
     setError('');
-    setIsAuthenticated(true, role);
+
+    // Derive the app role for navigator routing.
+    // If we have a real user from the API use their DB role; otherwise fall back
+    // to the role string that was passed directly (already in app-role format).
+    const appRole = user ? dbRoleToAppRole(user.role) : role;
+    login(token, user, appRole);
   }
 
   function handleResend() {
@@ -151,7 +160,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#A5D6A7',
+    borderColor: colors.successBorder,
   },
   title: {
     fontSize: typography.size.xl,

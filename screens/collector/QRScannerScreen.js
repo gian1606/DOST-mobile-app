@@ -7,9 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { typography } from '../../theme/typography';
-import { api } from '../../api';
+import { colors } from '../../theme/colors';
+import { confirmBinCollection } from '../../services/bins';
+import { ROUTES } from '../../navigation/routes';
 
-const C = { primary: '#0D7A5F' };
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 const CORNER_SIZE  = 22;
 const CORNER_WIDTH = 3;
@@ -39,8 +40,8 @@ export default function CollectorQRScannerScreen({ navigation }) {
     setLoading(true);
     setError('');
     try {
-      const response = await api.post('/bins/collection-confirm', { qr_payload: data });
-      navigation.replace('CollectionConfirmed', { result: response });
+      const response = await confirmBinCollection(data);
+      navigation.replace(ROUTES.COLLECTION_CONFIRMED, { result: response });
     } catch (err) {
       setError(err.message || 'Scan failed. Please try again.');
       setTimeout(() => setActive(true), 1500);
@@ -52,7 +53,7 @@ export default function CollectorQRScannerScreen({ navigation }) {
   if (!permission) {
     return (
       <View style={styles.centeredScreen}>
-        <ActivityIndicator color={C.primary} />
+        <ActivityIndicator color={colors.collectorPrimary} />
         <Text style={styles.permissionText}>Requesting camera access…</Text>
       </View>
     );
@@ -129,10 +130,10 @@ export default function CollectorQRScannerScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen:         { flex: 1, backgroundColor: '#000' },
   camera:         { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT },
-  centeredScreen: { flex: 1, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
+  centeredScreen: { flex: 1, backgroundColor: colors.cameraBg, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
   permissionText: { color: '#fff', fontSize: typography.size.base, fontWeight: '600', textAlign: 'center' },
   permissionSub:  { color: 'rgba(255,255,255,0.55)', fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 },
-  grantBtn:       { marginTop: 16, backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
+  grantBtn:       { marginTop: 16, backgroundColor: colors.collectorPrimary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
   grantBtnText:   { color: '#fff', fontWeight: '600' },
 
   overlay:  { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, paddingTop: 56, paddingBottom: 16 },

@@ -4,10 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockRewards } from '../../mock/data';
-import CategoryPill from '../../components/CategoryPill';
-import MRFRewardCard from '../../components/MRFRewardCard';
-
-const CATEGORIES = ['All', 'Food', 'Shopping', 'Services', 'Utilities'];
+import CategoryPill from '../../components/shared/CategoryPill';
+import MRFRewardCard from '../../components/mrf/MRFRewardCard';
+import { REWARD_CATEGORIES } from '../../constants';
 
 export default function RewardsScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -30,7 +29,7 @@ export default function RewardsScreen() {
 
       {/* Category filter */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {CATEGORIES.map((cat) => (
+        {REWARD_CATEGORIES.map((cat) => (
           <CategoryPill
             key={cat}
             label={cat}

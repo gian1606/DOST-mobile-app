@@ -5,18 +5,18 @@ import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockUser } from '../../mock/data';
-import ChangePasswordModal from '../../components/ChangePasswordModal';
-import InfoModal from '../../components/InfoModal';
-import { getUser, api } from '../../api';
+import ChangePasswordModal from '../../components/modals/ChangePasswordModal';
+import InfoModal from '../../components/modals/InfoModal';
+import { useAuth } from '../../context/AuthContext';
+import { fetchBalance } from '../../services/eco';
 
-export default function ProfileScreen({ setIsAuthenticated }) {
-  const [changePwVisible, setChangePwVisible] = useState(false);
+export default function ProfileScreen() {
+  const { logout, user: liveUser } = useAuth();  const [changePwVisible, setChangePwVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const [infoModal, setInfoModal] = useState(null);
   const [ecoBalance, setEcoBalance] = useState(null);
 
   // Use real logged-in user; fall back to mockUser for non-wired fields
-  const liveUser = getUser();
   const user = {
     ...mockUser,
     id:       liveUser?.id       ?? mockUser.id,
@@ -28,8 +28,8 @@ export default function ProfileScreen({ setIsAuthenticated }) {
 
   // Fetch real ECO balance on mount
   useEffect(() => {
-    api.get('/eco/balance')
-      .then((data) => setEcoBalance(Number(data.balance)))
+    fetchBalance()
+      .then((bal) => setEcoBalance(bal))
       .catch(() => {}); // silently fall back to mock if unreachable
   }, []);
 
@@ -123,7 +123,7 @@ export default function ProfileScreen({ setIsAuthenticated }) {
 
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => setIsAuthenticated(false, null)}
+          onPress={() => logout()}
           activeOpacity={0.8}
         >
           <Ionicons name="log-out-outline" size={18} color={colors.error} />
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   avatar: { width: 80, height: 80, borderRadius: 9999, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   avatarText: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.secondary },
   name: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.textPrimary },
-  barangayBadge: { backgroundColor: colors.successLight, borderWidth: 1, borderColor: '#A5D6A7', borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
+  barangayBadge: { backgroundColor: colors.successLight, borderWidth: 1, borderColor: colors.successBorder, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
   barangayText: { fontSize: typography.size.xs, color: colors.primary, fontWeight: typography.weight.semibold },
   memberSince: { fontSize: typography.size.xs, color: colors.textMuted },
   statsRow: { flexDirection: 'row', gap: 10 },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#A5D6A7',
+    borderColor: colors.successBorder,
   },
   qrInfo: { flex: 1, gap: 3 },
   qrTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.textPrimary },

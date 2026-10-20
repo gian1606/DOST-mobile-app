@@ -1,7 +1,7 @@
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
 
 export default function AdCard({ ad }) {
   return (

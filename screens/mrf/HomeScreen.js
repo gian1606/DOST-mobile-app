@@ -4,9 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { mockMRFUser, mockMRFLocations, mockPartnerAds, mockMRFNotifications } from '../../mock/data';
-import MRFMapCard from '../../components/MRFMapCard';
-import AdCard from '../../components/AdCard';
-import NotificationsModal from '../../components/NotificationsModal';
+import MRFMapCard from '../../components/mrf/MRFMapCard';
+import AdCard from '../../components/shared/AdCard';
+import NotificationsModal from '../../components/modals/NotificationsModal';
 
 export default function HomeScreen() {
   const [notifVisible, setNotifVisible] = useState(false);

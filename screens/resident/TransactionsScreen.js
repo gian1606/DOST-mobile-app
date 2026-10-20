@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator }
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import TransactionRow from '../../components/TransactionRow';
-import { api } from '../../api';
+import TransactionRow from '../../components/resident/TransactionRow';
+import { fetchTransactions } from '../../services/eco';
 
 export default function TransactionsScreen() {
   const [activeTab, setActiveTab] = useState('earned');
@@ -17,29 +17,10 @@ export default function TransactionsScreen() {
     useCallback(() => {
       setLoading(true);
       setError('');
-      api.get('/eco/transactions')
-        .then((data) => {
-          // Normalize to match TransactionRow's expected shape
-          setEarned(
-            (data.earned || []).map((t) => ({
-              id:          t.id,
-              type:        'earned',
-              title:       t.weight_kg ? `${t.title} · ${t.weight_kg} kg` : t.title,
-              description: t.tx_hash ? `tx: ${t.tx_hash.slice(0, 16)}...` : '',
-              dateTime:    new Date(t.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-              amount:      t.amount,
-            }))
-          );
-          setRedeemed(
-            (data.redeemed || []).map((t) => ({
-              id:          t.id,
-              type:        'redeemed',
-              title:       t.title,
-              description: t.tx_hash ? `tx: ${t.tx_hash.slice(0, 16)}...` : '',
-              dateTime:    new Date(t.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-              amount:      t.amount,
-            }))
-          );
+      fetchTransactions()
+        .then(({ earned, redeemed }) => {
+          setEarned(earned);
+          setRedeemed(redeemed);
         })
         .catch((err) => setError(err.message || 'Failed to load transactions.'))
         .finally(() => setLoading(false));

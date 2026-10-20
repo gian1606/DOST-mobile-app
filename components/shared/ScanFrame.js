@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors } from '../../theme/colors';
 
 export default function ScanFrame() {
   const scanLine = useRef(new Animated.Value(0)).current;

@@ -5,12 +5,12 @@ import QRCode from 'react-native-qrcode-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import EcoTokenBadge from '../../components/EcoTokenBadge';
-import CategoryPill from '../../components/CategoryPill';
-import RewardCard from '../../components/RewardCard';
-import { api, getUser } from '../../api';
-
-const CATEGORIES = ['All', 'Food', 'Shopping', 'Services', 'Utilities'];
+import EcoTokenBadge from '../../components/shared/EcoTokenBadge';
+import CategoryPill from '../../components/shared/CategoryPill';
+import RewardCard from '../../components/resident/RewardCard';
+import { useAuth } from '../../context/AuthContext';
+import { fetchRewards, fetchBalance, redeemReward } from '../../services/eco';
+import { REWARD_CATEGORIES } from '../../constants';
 
 export default function RewardsScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -23,18 +23,16 @@ export default function RewardsScreen() {
   const [redemptionId, setRedemptionId]     = useState(null);
   const [errorMsg, setErrorMsg]             = useState('');
   const [submitting, setSubmitting]         = useState(false);
-  const user = getUser();
+  const { user } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      Promise.all([
-        api.get('/eco/rewards'),
-        api.get('/eco/balance'),
-      ]).then(([rewardsData, balanceData]) => {
-        setRewards(rewardsData);
-        setBalance(Number(balanceData.balance));
-      }).catch(() => {}).finally(() => setLoading(false));
+      Promise.all([fetchRewards(), fetchBalance()])
+        .then(([rewardsData, bal]) => {
+          setRewards(rewardsData);
+          setBalance(bal);
+        }).catch(() => {}).finally(() => setLoading(false));
     }, [])
   );
 
@@ -51,7 +49,7 @@ export default function RewardsScreen() {
     setSubmitting(true);
     setErrorMsg('');
     try {
-      const data = await api.post(`/eco/rewards/${selectedReward.id}/redeem`, {});
+      const data = await redeemReward(selectedReward.id);
       setRedemptionId(data.redemptionId);
       setBalance((prev) => prev - selectedReward.eco_cost);
       setRedeemed(true);
@@ -62,14 +60,9 @@ export default function RewardsScreen() {
     }
   }
 
-  // Normalize API field names to what RewardCard expects
-  const normalizedRewards = rewards.map((r) => ({
-    ...r,
-    tokenCost: r.eco_cost,
-  }));
-
-  const featured = normalizedRewards.find((r) => r.featured);
-  const filtered = normalizedRewards.filter((r) =>
+  // RewardCard field names match the service's normalized output
+  const featured = rewards.find((r) => r.featured);
+  const filtered = rewards.filter((r) =>
     !r.featured && (activeCategory === 'All' || r.category === activeCategory)
   );
 
@@ -93,7 +86,7 @@ export default function RewardsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {CATEGORIES.map((cat) => (
+          {REWARD_CATEGORIES.map((cat) => (
             <CategoryPill
               key={cat}
               label={cat}
