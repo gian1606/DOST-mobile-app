@@ -1,26 +1,31 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { mockPartnerAds, mockMapData, mockMRFLocations, mockResidentNotifications } from '../../mock/data';
+import { PARTNER_ADS } from '../../constants';
 import MapCard from '../../components/resident/MapCard';
 import EcoTokenBadge from '../../components/shared/EcoTokenBadge';
 import AdCard from '../../components/shared/AdCard';
 import NotificationsModal from '../../components/modals/NotificationsModal';
 import { fetchBalance } from '../../services/eco';
+import { fetchNotifications, markAllNotificationsRead } from '../../services/notifications';
+import { fetchMRFFacilities } from '../../services/mrf';
+import { fetchBinsMap } from '../../services/bins';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../navigation/routes';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
-  const [notifVisible, setNotifVisible] = useState(false);
-  const [balance, setBalance]           = useState(null);
+  const [notifVisible, setNotifVisible]     = useState(false);
+  const [notifications, setNotifications]   = useState([]);
+  const [unreadCount, setUnreadCount]       = useState(0);
+  const [balance, setBalance]               = useState(null);
   const [balanceLoading, setBalanceLoading] = useState(true);
-  const unread = mockResidentNotifications.filter((n) => !n.read).length;
+  const [mrfLocations, setMrfLocations]     = useState([]);
+  const [bins, setBins]                     = useState([]);
 
-  // Refresh balance every time this screen comes into focus
   useFocusEffect(
     useCallback(() => {
       setBalanceLoading(true);
@@ -28,8 +33,29 @@ export default function HomeScreen({ navigation }) {
         .then((bal) => setBalance(bal))
         .catch(() => setBalance(0))
         .finally(() => setBalanceLoading(false));
-    }, [])
+
+      fetchNotifications()
+        .then(({ notifications: notifs, unreadCount: count }) => {
+          setNotifications(notifs);
+          setUnreadCount(count);
+        })
+        .catch(() => {});
+
+      fetchMRFFacilities()
+        .then(setMrfLocations)
+        .catch(() => {});
+
+      fetchBinsMap({ barangay: user?.barangay ?? undefined })
+        .then(setBins)
+        .catch(() => {});
+    }, [user?.barangay])
   );
+
+  function handleOpenNotifs() {
+    setNotifVisible(true);
+    setUnreadCount(0);
+    markAllNotificationsRead().catch(() => {});
+  }
 
   return (
     <View style={styles.screen}>
@@ -43,13 +69,13 @@ export default function HomeScreen({ navigation }) {
         </View>
         <TouchableOpacity
           style={styles.bellBtn}
-          onPress={() => setNotifVisible(true)}
+          onPress={handleOpenNotifs}
           activeOpacity={0.8}
         >
           <Ionicons name="notifications-outline" size={24} color={colors.secondary} />
-          {unread > 0 && (
+          {unreadCount > 0 && (
             <View style={styles.bellBadge}>
-              <Text style={styles.bellBadgeText}>{unread}</Text>
+              <Text style={styles.bellBadgeText}>{unreadCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -57,7 +83,7 @@ export default function HomeScreen({ navigation }) {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-        <MapCard mapData={mockMapData} mrfLocations={mockMRFLocations} />
+        <MapCard bins={bins} mrfLocations={mrfLocations} />
 
         {balanceLoading
           ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />
@@ -69,8 +95,13 @@ export default function HomeScreen({ navigation }) {
         }
 
         <Text style={styles.sectionLabel}>Check this out</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.adScroll} contentContainerStyle={{ paddingRight: 16 }}>
-          {mockPartnerAds.map((ad, index) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.adScroll}
+          contentContainerStyle={{ paddingRight: 16 }}
+        >
+          {PARTNER_ADS.map((ad, index) => (
             <AdCard key={ad.id} ad={ad} index={index} />
           ))}
         </ScrollView>
@@ -80,7 +111,7 @@ export default function HomeScreen({ navigation }) {
       <NotificationsModal
         visible={notifVisible}
         onClose={() => setNotifVisible(false)}
-        notifications={mockResidentNotifications}
+        notifications={notifications}
         accentColor={colors.primary}
       />
     </View>
@@ -88,15 +119,15 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20 },
-  greeting: { fontSize: typography.size.md, fontWeight: typography.weight.semibold, color: colors.secondary },
-  subtitle: { fontSize: typography.size.sm, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  screen:  { flex: 1, backgroundColor: colors.background },
+  header:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20 },
+  greeting:{ fontSize: typography.size.md, fontWeight: typography.weight.semibold, color: colors.secondary },
+  subtitle:{ fontSize: typography.size.sm, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   bellBtn: { position: 'relative', padding: 4 },
   bellBadge: { position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderRadius: 9999, backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: colors.primary },
   bellBadgeText: { fontSize: 9, color: '#fff', fontWeight: '700' },
-  scroll: { flex: 1 },
-  content: { padding: 20, gap: 18, paddingBottom: 40 },
-  sectionLabel: { fontSize: typography.size.md, fontWeight: typography.weight.semibold, color: colors.textPrimary },
-  adScroll: { marginHorizontal: -20 },
+  scroll:        { flex: 1 },
+  content:       { padding: 20, gap: 18, paddingBottom: 40 },
+  sectionLabel:  { fontSize: typography.size.md, fontWeight: typography.weight.semibold, color: colors.textPrimary },
+  adScroll:      { marginHorizontal: -20 },
 });

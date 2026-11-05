@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, Image,
   StyleSheet, ScrollView, KeyboardAvoidingView, Platform,
-  ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -49,12 +48,13 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <ImageBackground
-      source={require('../assets/login-bg.png')}
-      style={styles.bg}
-      resizeMode="cover"
-      blurRadius={Platform.OS === 'android' ? 4 : 10}
-    >
+    <View style={styles.bg}>
+      <Image
+        source={require('../assets/login-bg.png')}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        blurRadius={Platform.OS === 'android' ? 4 : 10}
+      />
       <View style={styles.scrim} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -105,7 +105,7 @@ export default function LoginScreen({ navigation }) {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </View>
   );
 }
 

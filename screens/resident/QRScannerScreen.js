@@ -1,22 +1,228 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, Modal, ActivityIndicator, AppState, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useFocusEffect } from '@react-navigation/native';
+import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { reportBinScan } from '../../services/bins';
+import { fetchUserProfile } from '../../services/auth';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
 const CORNER_SIZE  = 22;
 const CORNER_WIDTH = 3;
 
+// ─── Bottom mode switcher ─────────────────────────────────────────────────────
+function ModeSwitcher({ activeMode, onSwitch }) {
+  return (
+    <View style={switcherStyles.wrap}>
+      <View style={switcherStyles.pill}>
+        <TouchableOpacity
+          style={[switcherStyles.tab, activeMode === 'scan' && switcherStyles.tabActive]}
+          onPress={() => onSwitch('scan')}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="scan-outline"
+            size={16}
+            color={activeMode === 'scan' ? colors.secondary : 'rgba(255,255,255,0.6)'}
+          />
+          <Text style={[switcherStyles.tabLabel, activeMode === 'scan' && switcherStyles.tabLabelActive]}>
+            Scan Bin
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[switcherStyles.tab, activeMode === 'myqr' && switcherStyles.tabActive]}
+          onPress={() => onSwitch('myqr')}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="qr-code-outline"
+            size={16}
+            color={activeMode === 'myqr' ? colors.secondary : 'rgba(255,255,255,0.6)'}
+          />
+          <Text style={[switcherStyles.tabLabel, activeMode === 'myqr' && switcherStyles.tabLabelActive]}>
+            My QR
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const switcherStyles = StyleSheet.create({
+  wrap: {
+    position: 'absolute',
+    bottom: 36,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  pill: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 9999,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 9999,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+  },
+  tabLabel: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  tabLabelActive: {
+    color: colors.secondary,
+  },
+});
+
+// ─── My QR panel ─────────────────────────────────────────────────────────────
+function MyQRPanel({ profile, loading }) {
+  return (
+    <View style={qrStyles.screen}>
+      {loading || !profile ? (
+        <ActivityIndicator color={colors.primary} size="large" />
+      ) : (
+        <View style={qrStyles.card}>
+          {/* Header */}
+          <View style={qrStyles.cardHeader}>
+            <View style={qrStyles.avatar}>
+              <Text style={qrStyles.avatarText}>{profile.initials ?? '?'}</Text>
+            </View>
+            <Text style={qrStyles.name}>{profile.name ?? '—'}</Text>
+            <View style={qrStyles.barangayBadge}>
+              <Text style={qrStyles.barangayText}>{profile.barangay ?? '—'}</Text>
+            </View>
+          </View>
+
+          {/* QR Code */}
+          <View style={qrStyles.qrWrap}>
+            {profile.id ? (
+              <QRCode
+                value={`BESMART-RESIDENT-${profile.id}`}
+                size={210}
+                color={colors.textPrimary}
+                backgroundColor={colors.secondary}
+              />
+            ) : (
+              <ActivityIndicator color={colors.primary} />
+            )}
+          </View>
+
+          {/* Footer hint */}
+          <View style={qrStyles.hintRow}>
+            <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+            <Text style={qrStyles.hint}>
+              Show this to MRF staff to redeem your eco rewards
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const qrStyles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.cameraBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 110, // leave room for the mode switcher
+  },
+  card: {
+    backgroundColor: colors.secondary,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    gap: 16,
+    marginHorizontal: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  cardHeader: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 9999,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  avatarText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.secondary,
+  },
+  name: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+  },
+  barangayBadge: {
+    backgroundColor: colors.successLight,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+  },
+  barangayText: {
+    fontSize: typography.size.xs,
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
+  },
+  qrWrap: {
+    padding: 16,
+    backgroundColor: colors.secondary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  hint: {
+    flex: 1,
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+});
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function QRScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
+  const [activeMode, setActiveMode]     = useState('scan');
+
+  // Scanner state
   const [flashOn, setFlashOn]           = useState(false);
   const [scanning, setScanning]         = useState(true);
   const [loading, setLoading]           = useState(false);
@@ -24,8 +230,45 @@ export default function QRScannerScreen() {
   const [result, setResult]             = useState(null);
   const [successVisible, setSuccessVisible] = useState(false);
 
+  // My QR state
+  const [profile, setProfile]           = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   const isFocused = useIsFocused();
   const appState  = useRef(AppState.currentState);
+
+  // Fetch profile when "My QR" tab is first activated
+  useEffect(() => {
+    if (activeMode === 'myqr' && !profile) {
+      setProfileLoading(true);
+      fetchUserProfile()
+        .then(setProfile)
+        .catch(() => {})
+        .finally(() => setProfileLoading(false));
+    }
+  }, [activeMode]);
+
+  // Re-fetch profile every time this tab comes into focus (keeps data fresh)
+  useFocusEffect(
+    useCallback(() => {
+      if (activeMode === 'myqr') {
+        setProfileLoading(true);
+        fetchUserProfile()
+          .then(setProfile)
+          .catch(() => {})
+          .finally(() => setProfileLoading(false));
+      }
+    }, [activeMode])
+  );
+
+  // Reset scanning when switching back to scan mode
+  useEffect(() => {
+    if (activeMode === 'scan') {
+      setFlashOn(false);
+      setScanning(true);
+      setError('');
+    }
+  }, [activeMode]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -60,6 +303,7 @@ export default function QRScannerScreen() {
     setScanning(true);
   }
 
+  // ── Permission states ──────────────────────────────────────────────────────
   if (!permission) {
     return (
       <View style={styles.centeredScreen}>
@@ -81,11 +325,23 @@ export default function QRScannerScreen() {
       </View>
     );
   }
+
   // Unmount camera when tab is not focused — clean way to stop the feed
   if (!isFocused) {
     return <View style={styles.screen} />;
   }
 
+  // ── My QR mode ─────────────────────────────────────────────────────────────
+  if (activeMode === 'myqr') {
+    return (
+      <View style={styles.screen}>
+        <MyQRPanel profile={profile} loading={profileLoading} />
+        <ModeSwitcher activeMode={activeMode} onSwitch={setActiveMode} />
+      </View>
+    );
+  }
+
+  // ── Scan mode ──────────────────────────────────────────────────────────────
   return (
     <View style={styles.screen}>
 
@@ -131,6 +387,11 @@ export default function QRScannerScreen() {
         </View>
       )}
 
+      {/* Mode switcher — sits above scan overlay so it's always tappable */}
+      {!successVisible && (
+        <ModeSwitcher activeMode={activeMode} onSwitch={setActiveMode} />
+      )}
+
       <Modal visible={successVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -172,7 +433,7 @@ const styles = StyleSheet.create({
   grantBtn:       { marginTop: 16, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
   grantBtnText:   { color: '#fff', fontWeight: '600' },
 
-  overlay:  { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, paddingTop: 56, paddingBottom: 16 },
+  overlay:  { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, paddingTop: 56, paddingBottom: 110 },
   flashBtn: { alignSelf: 'flex-end', marginRight: 20, marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 9999 },
 
   scanArea:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity,
+  View, Text, TouchableOpacity, Image,
   StyleSheet, ScrollView, KeyboardAvoidingView,
-  Platform, Modal, FlatList, ImageBackground,
+  Platform, Modal, FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
-import { batangasBarangays } from '../mock/data';
+import { BATANGAS_BARANGAYS } from '../constants';
 import { registerUser } from '../services/auth';
 import FloatingInput from '../components/shared/FloatingInput';
 import { ROUTES } from '../navigation/routes';
@@ -36,7 +36,7 @@ function BarangayPicker({ value, onChange }) {
               </TouchableOpacity>
             </View>
             <FlatList
-              data={batangasBarangays}
+              data={BATANGAS_BARANGAYS}
               keyExtractor={(item) => item}
               renderItem={({ item }) => {
                 const sel = item === value;
@@ -92,12 +92,13 @@ export default function RegistrationScreen({ navigation }) {
   }
 
   return (
-    <ImageBackground
-      source={require('../assets/login-bg.png')}
-      style={styles.bg}
-      resizeMode="cover"
-      blurRadius={Platform.OS === 'android' ? 4 : 10}
-    >
+    <View style={styles.bg}>
+      <Image
+        source={require('../assets/login-bg.png')}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        blurRadius={Platform.OS === 'android' ? 4 : 10}
+      />
       <View style={styles.scrim} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -155,7 +156,7 @@ export default function RegistrationScreen({ navigation }) {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </View>
   );
 }
 

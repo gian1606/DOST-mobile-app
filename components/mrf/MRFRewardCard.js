@@ -3,13 +3,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
+const CATEGORY_COLORS = {
+  Food:      '#FFF9C4',
+  Shopping:  '#F3E5F5',
+  Services:  '#E3F2FD',
+  Utilities: '#FFF3E0',
+  default:   '#E8F5E9',
+};
+
+function placeholderBg(reward) {
+  if (reward.placeholderColor && typeof reward.placeholderColor === 'string') {
+    return reward.placeholderColor;
+  }
+  return CATEGORY_COLORS[reward.category] ?? CATEGORY_COLORS.default;
+}
+
 export default function MRFRewardCard({ reward }) {
   const outOfStock = reward.stock === 0;
 
   return (
     <View style={styles.card}>
-      <View style={[styles.imagePlaceholder, { backgroundColor: reward.placeholderColor }]}>
-        <Text style={styles.partnerInitial}>{reward.partner[0]}</Text>
+      <View style={[styles.imagePlaceholder, { backgroundColor: placeholderBg(reward) }]}>
+        <Text style={styles.partnerInitial}>{reward.partner?.[0] ?? '?'}</Text>
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.name} numberOfLines={2}>{reward.name}</Text>

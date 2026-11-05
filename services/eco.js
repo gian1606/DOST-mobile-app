@@ -54,11 +54,28 @@ export async function fetchRewards() {
 }
 
 /**
- * POST /eco/rewards/:id/redeem — redeems a reward.
- * Returns { redemptionId } on success.
+ * POST /eco/rewards/:id/redeem — Step 1 of two-step redemption.
+ * Creates a pending redemption row. Balance is NOT deducted here.
+ * Returns { redemptionId, rewardName, ecoCost }
  */
 export async function redeemReward(rewardId) {
   return api.post(`/eco/rewards/${rewardId}/redeem`, {});
+}
+
+/**
+ * GET /eco/redemptions/pending — returns the resident's unclaimed pending redemptions.
+ * Used by the Rewards screen to show "Ongoing" on cards with an in-flight QR.
+ * Each item: { redemptionId, rewardId, rewardName, ecoCost, redeemedAt }
+ */
+export async function fetchPendingRedemptions() {
+  const data = await api.get('/eco/redemptions/pending');
+  return data.map((r) => ({
+    redemptionId: r.redemption_id,
+    rewardId:     r.reward_id,
+    rewardName:   r.reward_name,
+    ecoCost:      r.eco_cost,
+    redeemedAt:   r.redeemed_at,
+  }));
 }
 
 /**
@@ -74,6 +91,15 @@ export async function fetchWasteTypes() {
  */
 export async function issueEco({ qrValue, wasteTypeId, weightKg }) {
   return api.post('/eco/issue', { qrValue, wasteTypeId, weightKg });
+}
+
+/**
+ * POST /eco/rewards/claim — Step 2 of two-step redemption.
+ * MRF worker scans a BESMART-REWARD-<uuid> QR → deducts balance + burns on-chain.
+ * Returns { redemptionId, rewardName, ecoCost, residentName, txHash }
+ */
+export async function claimRedemption(qrValue) {
+  return api.post('/eco/rewards/claim', { qrValue });
 }
 
 /**
