@@ -72,8 +72,7 @@ export default function CollectorQRScannerScreen({ navigation }) {
     );
   }
 
-  // Collector QR is a stack screen (not a tab), so isFocused handles
-  // the case where the user navigates away mid-scan
+  // QR scanner is a tab screen — isFocused pauses the camera when switching tabs
   if (!isFocused) {
     return <View style={styles.screen} />;
   }
@@ -91,14 +90,14 @@ export default function CollectorQRScannerScreen({ navigation }) {
 
       <View style={styles.overlay} pointerEvents="box-none">
 
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="close" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => setFlashOn(!flashOn)} activeOpacity={0.7}>
-            <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        {/* Flash toggle only — no X button since the tab bar handles navigation */}
+        <TouchableOpacity
+          style={styles.flashBtn}
+          onPress={() => setFlashOn(!flashOn)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
+        </TouchableOpacity>
 
         <View style={styles.scanArea} pointerEvents="none">
           <View style={styles.viewfinder}>
@@ -136,9 +135,8 @@ const styles = StyleSheet.create({
   grantBtn:       { marginTop: 16, backgroundColor: colors.collectorPrimary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
   grantBtnText:   { color: '#fff', fontWeight: '600' },
 
-  overlay:  { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, paddingTop: 56, paddingBottom: 16 },
-  topRow:   { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 8 },
-  iconBtn:  { backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 9999 },
+  overlay:  { position: 'absolute', top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, paddingTop: 56, paddingBottom: 110 },
+  flashBtn: { alignSelf: 'flex-end', marginRight: 20, marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 9999 },
 
   scanArea:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
   viewfinder:  { width: 240, height: 240 },

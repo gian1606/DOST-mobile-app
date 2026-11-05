@@ -60,7 +60,7 @@ function CollectorTabs() {
       />
       <Tab.Screen
         name={ROUTES.COLLECTOR_QR_TAB}
-        component={CollectorHome}
+        component={CollectorQRScanner}
         options={{
           tabBarLabel: () => null,
           tabBarIcon: () => (
@@ -78,12 +78,6 @@ function CollectorTabs() {
             </TouchableOpacity>
           ),
         }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate(ROUTES.COLLECTOR_QR_SCREEN);
-          },
-        })}
       />
       <Tab.Screen
         name={ROUTES.COLLECTOR_LOG_TAB}

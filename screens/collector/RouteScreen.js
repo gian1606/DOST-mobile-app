@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, Modal, TextInput,
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { typography } from '../../theme/typography';
 import { colors } from '../../theme/colors';
-import { mockCollectorUser, mockCollectorBins } from '../../mock/data';
+import { useAuth } from '../../context/AuthContext';
+import { fetchCollectorBins } from '../../services/bins';
 import { submitCollectorReport } from '../../services/collector';
-
 
 const STATUS_CONFIG = {
   full:      { color: colors.error,   label: 'Full',      icon: 'alert-circle-outline'     },
-  collected: { color: colors.accent, label: 'Collected', icon: 'checkmark-circle-outline' },
+  collected: { color: colors.accent,  label: 'Collected', icon: 'checkmark-circle-outline' },
   missed:    { color: colors.warning, label: 'Missed',    icon: 'close-circle-outline'     },
+  empty:     { color: colors.textMuted, label: 'Empty',   icon: 'ellipse-outline'          },
 };
 
 const ISSUE_TYPES = [
@@ -26,28 +28,40 @@ const ISSUE_TYPES = [
 ];
 
 export default function CollectorRouteScreen() {
-  const fullBins      = mockCollectorBins.filter((b) => b.status === 'full').length;
-  const collectedBins = mockCollectorBins.filter((b) => b.status === 'collected').length;
-  const totalBins     = mockCollectorBins.length;
-  const progress      = Math.round((collectedBins / totalBins) * 100);
+  const { user } = useAuth();
 
-  // ── Report modal state ──────────────────────────────────────────────────────
-  const [reportVisible, setReportVisible] = useState(false);
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [notes, setNotes]                 = useState('');
-  const [submitting, setSubmitting]       = useState(false);
-  const [submitError, setSubmitError]     = useState('');
+  const [bins, setBins]       = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Report modal state
+  const [reportVisible, setReportVisible]   = useState(false);
+  const [selectedIssue, setSelectedIssue]   = useState(null);
+  const [notes, setNotes]                   = useState('');
+  const [submitting, setSubmitting]         = useState(false);
+  const [submitError, setSubmitError]       = useState('');
   const [successVisible, setSuccessVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      // Fetch FULL bins — the route is bins that still need collecting
+      fetchCollectorBins({ status: 'FULL' })
+        .then(setBins)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }, [])
+  );
+
+  const fullBins      = bins.filter((b) => b.status === 'full').length;
+  const collectedBins = bins.filter((b) => b.status === 'collected').length;
+  const totalBins     = bins.length;
+  const progress      = totalBins > 0 ? Math.round((collectedBins / totalBins) * 100) : 0;
 
   function openReport() {
     setSelectedIssue(null);
     setNotes('');
     setSubmitError('');
     setReportVisible(true);
-  }
-
-  function closeReport() {
-    setReportVisible(false);
   }
 
   async function handleSubmitReport() {
@@ -59,10 +73,10 @@ export default function CollectorRouteScreen() {
     setSubmitError('');
     try {
       await submitCollectorReport({
-        issueType:       selectedIssue,
-        notes:           notes.trim() || null,
-        stopsCompleted:  collectedBins,
-        stopsTotal:      totalBins,
+        issueType:      selectedIssue,
+        notes:          notes.trim() || null,
+        stopsCompleted: collectedBins,
+        stopsTotal:     totalBins,
       });
       setReportVisible(false);
       setSuccessVisible(true);
@@ -76,12 +90,11 @@ export default function CollectorRouteScreen() {
   return (
     <View style={styles.screen}>
 
-      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.title}>Today's Route</Text>
           <Text style={styles.subtitle}>
-            {mockCollectorUser.zone} · {mockCollectorBins.length} stops
+            {user?.barangay ? `${user.barangay} · ` : ''}{bins.length} stop{bins.length !== 1 ? 's' : ''}
           </Text>
         </View>
         <TouchableOpacity style={styles.reportBtn} onPress={openReport} activeOpacity={0.8}>
@@ -90,82 +103,85 @@ export default function CollectorRouteScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {loading ? (
+        <ActivityIndicator color={colors.collectorPrimary} style={{ marginTop: 60 }} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Progress card */}
-        <View style={styles.progressCard}>
-          <View style={styles.progressTop}>
-            <View style={styles.progressLeft}>
-              <Text style={styles.progressTitle}>Route Progress</Text>
-              <Text style={styles.progressSub}>{collectedBins} of {totalBins} bins collected</Text>
-            </View>
-            <Text style={styles.progressPct}>{progress}%</Text>
-          </View>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-          </View>
-          <View style={styles.progressStats}>
-            <View style={styles.progressStat}>
-              <View style={[styles.statDot, { backgroundColor: colors.error }]} />
-              <Text style={styles.progressStatText}>{fullBins} remaining</Text>
-            </View>
-            <View style={styles.progressStat}>
-              <View style={[styles.statDot, { backgroundColor: colors.accent }]} />
-              <Text style={styles.progressStatText}>{collectedBins} collected</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Stop list */}
-        <Text style={styles.sectionLabel}>Stops</Text>
-        {mockCollectorBins.map((bin, index) => {
-          const cfg = STATUS_CONFIG[bin.status] || STATUS_CONFIG.full;
-          return (
-            <View key={bin.id} style={styles.stopCard}>
-              <View style={[styles.stepBadge, { backgroundColor: cfg.color }]}>
-                <Text style={styles.stepNumber}>{index + 1}</Text>
+          {/* Progress card */}
+          <View style={styles.progressCard}>
+            <View style={styles.progressTop}>
+              <View style={styles.progressLeft}>
+                <Text style={styles.progressTitle}>Route Progress</Text>
+                <Text style={styles.progressSub}>{collectedBins} of {totalBins} bins collected</Text>
               </View>
-              <View style={styles.stopInfo}>
-                <Text style={styles.stopName}>{bin.name} — {bin.street}</Text>
-                <Text style={styles.stopBarangay}>{bin.barangay}</Text>
-                <Text style={styles.stopReported}>
-                  Reported by {bin.reportedBy} · {bin.timeReported}
-                </Text>
+              <Text style={styles.progressPct}>{progress}%</Text>
+            </View>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+            </View>
+            <View style={styles.progressStats}>
+              <View style={styles.progressStat}>
+                <View style={[styles.statDot, { backgroundColor: colors.error }]} />
+                <Text style={styles.progressStatText}>{fullBins} remaining</Text>
               </View>
-              <View style={[styles.statusPill, { backgroundColor: cfg.color + '22', borderColor: cfg.color }]}>
-                <Ionicons name={cfg.icon} size={13} color={cfg.color} />
-                <Text style={[styles.statusPillText, { color: cfg.color }]}>{cfg.label}</Text>
+              <View style={styles.progressStat}>
+                <View style={[styles.statDot, { backgroundColor: colors.accent }]} />
+                <Text style={styles.progressStatText}>{collectedBins} collected</Text>
               </View>
             </View>
-          );
-        })}
+          </View>
 
-        <View style={{ height: 30 }} />
-      </ScrollView>
+          {/* Stop list */}
+          <Text style={styles.sectionLabel}>Stops</Text>
+          {bins.length === 0 && (
+            <Text style={styles.emptyText}>No bins assigned to your route yet.</Text>
+          )}
+          {bins.map((bin, index) => {
+            const cfg = STATUS_CONFIG[bin.status] ?? STATUS_CONFIG.full;
+            return (
+              <View key={bin.id} style={styles.stopCard}>
+                <View style={[styles.stepBadge, { backgroundColor: cfg.color }]}>
+                  <Text style={styles.stepNumber}>{index + 1}</Text>
+                </View>
+                <View style={styles.stopInfo}>
+                  <Text style={styles.stopName}>{bin.name}{bin.street ? ` — ${bin.street}` : ''}</Text>
+                  <Text style={styles.stopBarangay}>{bin.barangay}</Text>
+                  {bin.reportedBy ? (
+                    <Text style={styles.stopReported}>
+                      Reported by {bin.reportedBy}{bin.timeReported ? ` · ${bin.timeReported}` : ''}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: cfg.color + '22', borderColor: cfg.color }]}>
+                  <Ionicons name={cfg.icon} size={13} color={cfg.color} />
+                  <Text style={[styles.statusPillText, { color: cfg.color }]}>{cfg.label}</Text>
+                </View>
+              </View>
+            );
+          })}
 
-      {/* ── Report Modal ── */}
-      <Modal
-        visible={reportVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={closeReport}>
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      )}
+
+      {/* Report Modal */}
+      <Modal visible={reportVisible} transparent animationType="slide" onRequestClose={() => setReportVisible(false)}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalSheet}>
-
-            {/* Modal header */}
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <Ionicons name="warning" size={20} color={colors.error} />
                 <Text style={styles.modalTitle}>Report an Issue</Text>
               </View>
-              <TouchableOpacity onPress={closeReport} disabled={submitting}>
+              <TouchableOpacity onPress={() => setReportVisible(false)} disabled={submitting}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            {/* Progress context */}
             <View style={styles.progressBadge}>
               <Ionicons name="location-outline" size={13} color={colors.collectorPrimary} />
               <Text style={styles.progressBadgeText}>
@@ -173,7 +189,6 @@ export default function CollectorRouteScreen() {
               </Text>
             </View>
 
-            {/* Issue type selector */}
             <Text style={styles.fieldLabel}>Issue Type <Text style={styles.required}>*</Text></Text>
             <View style={styles.issueList}>
               {ISSUE_TYPES.map((issue) => {
@@ -183,7 +198,8 @@ export default function CollectorRouteScreen() {
                     key={issue}
                     style={[styles.issuePill, isSelected && styles.issuePillSelected]}
                     onPress={() => { setSelectedIssue(issue); setSubmitError(''); }}
-                    activeOpacity={0.7}>
+                    activeOpacity={0.7}
+                  >
                     <Text style={[styles.issuePillText, isSelected && styles.issuePillTextSelected]}>
                       {issue}
                     </Text>
@@ -192,7 +208,6 @@ export default function CollectorRouteScreen() {
               })}
             </View>
 
-            {/* Notes */}
             <Text style={styles.fieldLabel}>Additional Notes <Text style={styles.optional}>(optional)</Text></Text>
             <TextInput
               style={styles.notesInput}
@@ -206,25 +221,23 @@ export default function CollectorRouteScreen() {
               editable={!submitting}
             />
 
-            {/* Error */}
-            {submitError ? (
-              <Text style={styles.errorText}>{submitError}</Text>
-            ) : null}
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
 
-            {/* Actions */}
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={closeReport}
+                onPress={() => setReportVisible(false)}
                 disabled={submitting}
-                activeOpacity={0.7}>
+                activeOpacity={0.7}
+              >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
                 onPress={handleSubmitReport}
                 disabled={submitting}
-                activeOpacity={0.8}>
+                activeOpacity={0.8}
+              >
                 {submitting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
@@ -235,17 +248,12 @@ export default function CollectorRouteScreen() {
                 )}
               </TouchableOpacity>
             </View>
-
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── Success Modal ── */}
-      <Modal
-        visible={successVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSuccessVisible(false)}>
+      {/* Success Modal */}
+      <Modal visible={successVisible} transparent animationType="fade" onRequestClose={() => setSuccessVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.successSheet}>
             <View style={styles.successIcon}>
@@ -258,7 +266,8 @@ export default function CollectorRouteScreen() {
             <TouchableOpacity
               style={styles.successBtn}
               onPress={() => setSuccessVisible(false)}
-              activeOpacity={0.8}>
+              activeOpacity={0.8}
+            >
               <Text style={styles.successBtnText}>Got it</Text>
             </TouchableOpacity>
           </View>
@@ -271,46 +280,25 @@ export default function CollectorRouteScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.collectorLight },
-
-  // ── Header ──
   header: {
     backgroundColor: colors.collectorPrimary,
-    paddingTop: 56,
-    paddingBottom: 18,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    paddingTop: 56, paddingBottom: 18, paddingHorizontal: 20,
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
   },
   headerLeft: { gap: 4 },
   title:      { fontSize: 24, fontWeight: '700', color: '#fff' },
   subtitle:   { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
   reportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.error,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.error, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
   },
   reportBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-
-  content: { padding: 16, gap: 14 },
-
-  // ── Progress card ──
+  content:       { padding: 16, gap: 14 },
   progressCard: {
-    backgroundColor: colors.secondary,
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: colors.collectorBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    backgroundColor: colors.secondary, borderRadius: 14, padding: 16, gap: 12,
+    borderWidth: 1, borderColor: colors.collectorBorder,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
   progressTop:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   progressLeft: { gap: 2 },
@@ -323,29 +311,17 @@ const styles = StyleSheet.create({
   progressStat:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statDot:       { width: 8, height: 8, borderRadius: 9999 },
   progressStatText: { fontSize: typography.size.xs, color: colors.textSecondary },
-
   sectionLabel: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.bold,
-    color: colors.textPrimary,
-    marginTop: 4,
+    fontSize: typography.size.base, fontWeight: typography.weight.bold,
+    color: colors.textPrimary, marginTop: 4,
   },
-
-  // ── Stop card ──
+  emptyText: { textAlign: 'center', color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 8 },
   stopCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.secondary,
-    borderRadius: 12,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: colors.collectorBorder,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.secondary, borderRadius: 12, padding: 14, gap: 12,
+    borderWidth: 1, borderColor: colors.collectorBorder,
   },
-  stepBadge: {
-    width: 28, height: 28, borderRadius: 9999,
-    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
-  },
+  stepBadge:    { width: 28, height: 28, borderRadius: 9999, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   stepNumber:   { fontSize: typography.size.xs, fontWeight: typography.weight.bold, color: '#fff' },
   stopInfo:     { flex: 1, gap: 2 },
   stopName:     { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.textPrimary },
@@ -357,117 +333,60 @@ const styles = StyleSheet.create({
     borderWidth: 1, flexShrink: 0,
   },
   statusPillText: { fontSize: typography.size.xs, fontWeight: typography.weight.semibold },
-
-  // ── Report Modal ──
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
+  modalOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: {
-    backgroundColor: colors.secondary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    gap: 16,
-    paddingBottom: 36,
+    backgroundColor: colors.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24, gap: 16, paddingBottom: 36,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  modalHeader:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   modalTitle:    { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-
   progressBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#E8F5E9', borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#C8E6C9',
   },
   progressBadgeText: { fontSize: 12, color: colors.collectorPrimary, fontWeight: '600' },
-
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   required:   { color: colors.error },
   optional:   { fontSize: 12, fontWeight: '400', color: colors.textSecondary },
-
-  issueList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  issueList:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   issuePill: {
-    borderRadius: 99,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#F9FAFB',
+    borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1.5, borderColor: '#D1D5DB', backgroundColor: '#F9FAFB',
   },
-  issuePillSelected: {
-    borderColor: colors.error,
-    backgroundColor: '#FFF5F5',
-  },
+  issuePillSelected:     { borderColor: colors.error, backgroundColor: '#FFF5F5' },
   issuePillText:         { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   issuePillTextSelected: { color: colors.error, fontWeight: '700' },
-
   notesInput: {
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    color: colors.textPrimary,
-    backgroundColor: '#F9FAFB',
-    minHeight: 90,
+    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 12,
+    padding: 12, fontSize: 14, color: colors.textPrimary,
+    backgroundColor: '#F9FAFB', minHeight: 90,
   },
-
-  errorText: { fontSize: 13, color: colors.error, textAlign: 'center' },
-
+  errorText:    { fontSize: 13, color: colors.error, textAlign: 'center' },
   modalActions: { flexDirection: 'row', gap: 12 },
   cancelBtn: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    flex: 1, borderRadius: 12, paddingVertical: 13,
+    alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB',
   },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   submitBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 12,
-    paddingVertical: 13,
+    flex: 2, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 8, borderRadius: 12, paddingVertical: 13,
     backgroundColor: colors.error,
   },
   submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-
-  // ── Success Modal ──
+  submitBtnText:     { fontSize: 14, fontWeight: '700', color: '#fff' },
   successSheet: {
-    backgroundColor: colors.secondary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    gap: 12,
-    paddingBottom: 48,
+    backgroundColor: colors.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 32, alignItems: 'center', gap: 12, paddingBottom: 48,
   },
   successIcon:  { marginBottom: 4 },
   successTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   successSub:   { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   successBtn: {
-    marginTop: 8,
-    backgroundColor: colors.collectorPrimary,
-    borderRadius: 12,
-    paddingVertical: 13,
-    paddingHorizontal: 40,
+    marginTop: 8, backgroundColor: colors.collectorPrimary,
+    borderRadius: 12, paddingVertical: 13, paddingHorizontal: 40,
   },
   successBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

@@ -5,48 +5,33 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../theme/typography';
-import { mockCollectorUser, mockCollectorBins } from '../../mock/data';
 import { ROUTES } from '../../navigation/routes';
 import { colors } from '../../theme/colors';
+import { useAuth } from '../../context/AuthContext';
 
-// Next bin after the confirmed one
-const nextBin = mockCollectorBins.find((b) => b.status === 'full' && b.id !== 'BIN-2024-A')
-  || mockCollectorBins[0];
-
-// Simple mini-map for the confirmed screen
+// Simple mini-map for the confirmed screen — shows the confirmed bin only
 function MiniMap({ confirmedBin }) {
   return (
     <View style={miniMapStyles.container}>
       <View style={miniMapStyles.routeLine} />
-      {mockCollectorBins.map((bin) => {
-        const isConfirmed = bin.id === confirmedBin?.id;
-        const color = isConfirmed
-          ? colors.accent
-          : bin.status === 'full'
-          ? colors.error
-          : bin.status === 'collected'
-          ? colors.accent
-          : colors.warning;
-        return (
-          <View
-            key={bin.id}
-            style={[
-              miniMapStyles.dot,
-              {
-                left: `${bin.posX * 100}%`,
-                top:  `${bin.posY * 100}%`,
-                backgroundColor: color,
-                borderWidth: isConfirmed ? 2.5 : 1.5,
-                borderColor: isConfirmed ? colors.collectorAccent : '#fff',
-                width: isConfirmed ? 20 : 14,
-                height: isConfirmed ? 20 : 14,
-                marginLeft: isConfirmed ? -10 : -7,
-                marginTop:  isConfirmed ? -10 : -7,
-              },
-            ]}
-          />
-        );
-      })}
+      {confirmedBin && (
+        <View
+          style={[
+            miniMapStyles.dot,
+            {
+              left: '50%',
+              top:  '45%',
+              backgroundColor: colors.accent,
+              borderWidth: 2.5,
+              borderColor: colors.collectorAccent,
+              width: 20,
+              height: 20,
+              marginLeft: -10,
+              marginTop: -10,
+            },
+          ]}
+        />
+      )}
       <TouchableOpacity style={miniMapStyles.satelliteBtn} activeOpacity={0.8}>
         <Text style={miniMapStyles.satelliteText}>Satellite</Text>
       </TouchableOpacity>
@@ -65,19 +50,20 @@ function MiniMap({ confirmedBin }) {
 export default function CollectionConfirmedScreen({ navigation, route }) {
   // result comes from the API response via CollectorQRScannerScreen
   const apiResult = route?.params?.result;
-  // Fall back to mock bin for display if no API result (shouldn't happen in production)
-  const bin = route?.params?.bin || mockCollectorBins[2];
+  const bin = route?.params?.bin ?? null;
+  const { user } = useAuth();
   const [weightModalVisible, setWeightModalVisible] = useState(false);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   // Use API data when available
-  const binName     = apiResult?.bin_id    ? `Bin ${apiResult.bin_id.slice(0, 8)}…` : bin.name;
-  const binStreet   = bin.street || '';
-  const binBarangay = bin.barangay || '';
+  const binName      = apiResult?.bin_id     ? `Bin ${apiResult.bin_id.slice(0, 8)}…` : (bin?.name ?? 'Bin');
+  const binStreet    = bin?.street           ?? '';
+  const binBarangay  = bin?.barangay         ?? '';
   const residentName = apiResult?.resident_name ?? '—';
-  const ecoAwarded   = apiResult?.eco_awarded ?? 0;
+  const ecoAwarded   = apiResult?.eco_awarded   ?? 0;
+  const collectorName = user?.name ?? '—';
 
   return (
     <View style={styles.screen}>
@@ -107,7 +93,7 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
               <Text style={styles.recordedText}>Recorded</Text>
             </View>
           </View>
-          <LogRow label="Collected by"   value={mockCollectorUser.name} />
+          <LogRow label="Collected by"   value={collectorName} />
           <LogRow label="Resident"       value={residentName} />
           <LogRow label="ECO Awarded"    value={`+${ecoAwarded} ECO`} />
           <LogRow label="Time"           value={timeStr} />
@@ -120,12 +106,12 @@ export default function CollectionConfirmedScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Next bin banner */}
+        {/* Next bin banner — navigate to QR scanner for the next collection */}
         <View style={styles.nextBinBanner}>
           <Ionicons name="navigate-outline" size={18} color={colors.collectorPrimary} />
           <View style={styles.nextBinInfo}>
-            <Text style={styles.nextBinTitle}>Next: {nextBin.name} — {nextBin.street}</Text>
-            <Text style={styles.nextBinSub}>1.2 km · ~5 min drive</Text>
+            <Text style={styles.nextBinTitle}>Scan next bin to continue</Text>
+            <Text style={styles.nextBinSub}>Point camera at the bin's QR code</Text>
           </View>
         </View>
 

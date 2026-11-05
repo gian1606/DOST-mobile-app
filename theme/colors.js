@@ -9,6 +9,7 @@ export const colors = {
   textMuted:         '#9CA3AF',
   error:             '#D32F2F',
   warning:           '#F57C00',
+  warningLight:      '#FFF3E0',   // amber-tinted background for "Ongoing" state
   cardBorder:        '#E5E7EB',
   successLight:      '#E8F5E9',
   successBorder:     '#A5D6A7',   // green border paired with successLight

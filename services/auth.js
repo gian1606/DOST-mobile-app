@@ -57,3 +57,17 @@ export async function registerUser({ name, email, phone, barangay, password, rol
     appRole: dbRoleToAppRole(data.user.role),
   };
 }
+
+/**
+ * Calls GET /auth/me.
+ * Returns the authenticated user's full profile with role-specific computed stats.
+ *
+ * Shape depends on role — see users.controller.js on the API for details:
+ *   resident    → { ...base, ecoTokenBalance, totalEarned, totalRedeemed, binsReported, itemsRedeemed }
+ *   mrf_worker  → { ...base, tokensIssued, scansToday, residentsServed }
+ *   collector   → { ...base, assignedUnit, assignedUnitId, binsCollectedToday, totalCollectedL }
+ *   mrf_buyer   → { ...base, totalPurchases, completedReservations }
+ */
+export async function fetchUserProfile() {
+  return api.get('/auth/me');
+}

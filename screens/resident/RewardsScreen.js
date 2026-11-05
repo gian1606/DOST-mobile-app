@@ -8,34 +8,42 @@ import { typography } from '../../theme/typography';
 import EcoTokenBadge from '../../components/shared/EcoTokenBadge';
 import CategoryPill from '../../components/shared/CategoryPill';
 import RewardCard from '../../components/resident/RewardCard';
-import { useAuth } from '../../context/AuthContext';
-import { fetchRewards, fetchBalance, redeemReward } from '../../services/eco';
+import { fetchRewards, fetchBalance, redeemReward, fetchPendingRedemptions } from '../../services/eco';
 import { REWARD_CATEGORIES } from '../../constants';
 
 export default function RewardsScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [rewards, setRewards]               = useState([]);
   const [balance, setBalance]               = useState(0);
+  const [pendingMap, setPendingMap]         = useState({}); // rewardId → redemptionId
   const [loading, setLoading]               = useState(true);
+
+  // Modal state
   const [selectedReward, setSelectedReward] = useState(null);
   const [modalVisible, setModalVisible]     = useState(false);
-  const [redeemed, setRedeemed]             = useState(false);
+  const [redeemed, setRedeemed]             = useState(false);      // true = show QR step
   const [redemptionId, setRedemptionId]     = useState(null);
   const [errorMsg, setErrorMsg]             = useState('');
   const [submitting, setSubmitting]         = useState(false);
-  const { user } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      Promise.all([fetchRewards(), fetchBalance()])
-        .then(([rewardsData, bal]) => {
+      Promise.all([fetchRewards(), fetchBalance(), fetchPendingRedemptions()])
+        .then(([rewardsData, bal, pending]) => {
           setRewards(rewardsData);
           setBalance(bal);
-        }).catch(() => {}).finally(() => setLoading(false));
+          // Build a map of rewardId → redemptionId for O(1) lookup per card
+          const map = {};
+          pending.forEach((p) => { map[p.rewardId] = p.redemptionId; });
+          setPendingMap(map);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
     }, [])
   );
 
+  // Resident taps "Redeem" — open confirmation modal
   function handleRedeem(id) {
     const reward = rewards.find((r) => r.id === id);
     setSelectedReward(reward);
@@ -45,22 +53,51 @@ export default function RewardsScreen() {
     setModalVisible(true);
   }
 
+  // Resident taps "Ongoing" — reopen QR modal for the existing pending redemption
+  function handleViewQR(existingRedemptionId) {
+    // Find which reward this belongs to
+    const rewardId = Object.keys(pendingMap).find(
+      (rid) => pendingMap[rid] === existingRedemptionId
+    );
+    const reward = rewardId ? rewards.find((r) => r.id === rewardId) : null;
+    setSelectedReward(reward ?? null);
+    setRedemptionId(existingRedemptionId);
+    setRedeemed(true);
+    setErrorMsg('');
+    setModalVisible(true);
+  }
+
   async function confirmRedeem() {
     setSubmitting(true);
     setErrorMsg('');
     try {
       const data = await redeemReward(selectedReward.id);
       setRedemptionId(data.redemptionId);
-      setBalance((prev) => prev - selectedReward.eco_cost);
+      // Add to pending map immediately so the card flips to "Ongoing" if user
+      // closes the modal without the MRF scanning
+      setPendingMap((prev) => ({ ...prev, [selectedReward.id]: data.redemptionId }));
       setRedeemed(true);
     } catch (err) {
-      setErrorMsg(err.message || 'Redemption failed. Please try again.');
+      // 409 means a pending redemption already exists — show the existing QR instead
+      if (err.status === 409 && err.redemptionId) {
+        setRedemptionId(err.redemptionId);
+        setPendingMap((prev) => ({ ...prev, [selectedReward.id]: err.redemptionId }));
+        setRedeemed(true);
+      } else {
+        setErrorMsg(err.message || 'Redemption failed. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
-  // RewardCard field names match the service's normalized output
+  function closeModal() {
+    setModalVisible(false);
+    setRedeemed(false);
+    setErrorMsg('');
+    // Keep redemptionId in pendingMap — card stays "Ongoing" until MRF scans it
+  }
+
   const featured = rewards.find((r) => r.featured);
   const filtered = rewards.filter((r) =>
     !r.featured && (activeCategory === 'All' || r.category === activeCategory)
@@ -108,13 +145,24 @@ export default function RewardsScreen() {
                 <Ionicons name="diamond" size={13} color={colors.primary} />
                 <Text style={styles.featuredCost}>{featured.eco_cost.toLocaleString()} ECO</Text>
               </View>
-              <TouchableOpacity
-                style={styles.featuredBtn}
-                onPress={() => handleRedeem(featured.id)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.featuredBtnText}>Redeem</Text>
-              </TouchableOpacity>
+              {pendingMap[featured.id] ? (
+                <TouchableOpacity
+                  style={styles.featuredOngoingBtn}
+                  onPress={() => handleViewQR(pendingMap[featured.id])}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="time-outline" size={14} color={colors.warning} />
+                  <Text style={styles.featuredOngoingText}>Ongoing</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.featuredBtn}
+                  onPress={() => handleRedeem(featured.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.featuredBtnText}>Redeem</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -122,12 +170,18 @@ export default function RewardsScreen() {
         <View style={styles.grid}>
           {filtered.map((reward) => (
             <View key={reward.id} style={styles.gridItem}>
-              <RewardCard reward={reward} onRedeem={handleRedeem} />
+              <RewardCard
+                reward={reward}
+                onRedeem={handleRedeem}
+                isPending={!!pendingMap[reward.id]}
+                redemptionId={pendingMap[reward.id]}
+                onViewQR={handleViewQR}
+              />
             </View>
           ))}
         </View>
 
-        {/* Redeem modal */}
+        {/* Redeem / QR modal */}
         <Modal visible={modalVisible} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
@@ -142,9 +196,14 @@ export default function RewardsScreen() {
                 </>
               ) : redeemed ? (
                 <>
-                  <TouchableOpacity style={styles.closeBtn} onPress={() => { setModalVisible(false); setRedeemed(false); }}>
+                  {/* QR step — waiting for MRF scan */}
+                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
                     <Ionicons name="close" size={22} color={colors.textSecondary} />
                   </TouchableOpacity>
+                  <View style={styles.ongoingBadge}>
+                    <Ionicons name="time-outline" size={14} color={colors.warning} />
+                    <Text style={styles.ongoingBadgeText}>Awaiting MRF scan</Text>
+                  </View>
                   <Text style={styles.modalSubtitle}>{selectedReward?.name}</Text>
                   <View style={styles.qrWrapper}>
                     <QRCode
@@ -154,10 +213,13 @@ export default function RewardsScreen() {
                       backgroundColor={colors.secondary}
                     />
                   </View>
-                  <Text style={styles.qrHint}>Present this QR code to the partner to claim your reward.</Text>
+                  <Text style={styles.qrHint}>
+                    Show this QR to MRF staff. Your ECO will be deducted once they scan it.
+                  </Text>
                 </>
               ) : (
                 <>
+                  {/* Confirmation step */}
                   <Text style={styles.modalTitle}>Redeem Reward?</Text>
                   <Text style={styles.modalSubtitle}>{selectedReward?.name}</Text>
                   <Text style={styles.modalCost}>{selectedReward?.eco_cost?.toLocaleString()} ECO</Text>
@@ -191,35 +253,44 @@ export default function RewardsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  header: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20, gap: 6 },
-  title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.secondary },
+  screen:   { flex: 1, backgroundColor: colors.background },
+  header:   { backgroundColor: colors.primary, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20, gap: 6 },
+  title:    { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.secondary },
   subtitle: { fontSize: typography.size.sm, color: 'rgba(255,255,255,0.75)' },
-  scroll: { flex: 1 },
-  content: { padding: 20, gap: 18, paddingBottom: 40 },
-  featuredCard: { backgroundColor: colors.secondary, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  scroll:   { flex: 1 },
+  content:  { padding: 20, gap: 18, paddingBottom: 40 },
+
+  featuredCard:  { backgroundColor: colors.secondary, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   featuredImage: { height: 100, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', gap: 6 },
   featuredLabel: { color: colors.secondary, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, letterSpacing: 1 },
-  featuredBody: { padding: 14, gap: 8 },
-  featuredName: { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.textPrimary },
-  featuredCostRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  featuredCost: { fontSize: typography.size.sm, color: colors.primary, fontWeight: typography.weight.medium },
-  featuredBtn: { backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginTop: 4 },
-  featuredBtnText: { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  featuredBody:  { padding: 14, gap: 8 },
+  featuredName:  { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.textPrimary },
+  featuredCostRow:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  featuredCost:      { fontSize: typography.size.sm, color: colors.primary, fontWeight: typography.weight.medium },
+  featuredBtn:       { backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginTop: 4 },
+  featuredBtnText:   { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },
+  featuredOngoingBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: colors.warning, borderRadius: 8, paddingVertical: 10, marginTop: 4, backgroundColor: colors.warningLight },
+  featuredOngoingText: { color: colors.warning, fontWeight: typography.weight.bold, fontSize: typography.size.base },
+
+  grid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridItem: { width: '47%' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalCard: { backgroundColor: colors.secondary, borderRadius: 18, padding: 28, width: '100%', alignItems: 'center', gap: 12 },
-  modalTitle: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.textPrimary, textAlign: 'center' },
-  modalSubtitle: { fontSize: typography.size.base, color: colors.textSecondary, textAlign: 'center' },
-  modalCost: { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.primary },
+
+  modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalCard:      { backgroundColor: colors.secondary, borderRadius: 18, padding: 28, width: '100%', alignItems: 'center', gap: 12 },
+  modalTitle:     { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.textPrimary, textAlign: 'center' },
+  modalSubtitle:  { fontSize: typography.size.base, color: colors.textSecondary, textAlign: 'center' },
+  modalCost:      { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.primary },
   insufficientText: { fontSize: typography.size.sm, color: colors.error, fontWeight: typography.weight.medium },
-  modalActions: { flexDirection: 'row', gap: 12, marginTop: 8, width: '100%' },
+  modalActions:   { flexDirection: 'row', gap: 12, marginTop: 8, width: '100%' },
   modalCancelBtn: { flex: 1, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   modalCancelText: { fontSize: typography.size.base, color: colors.textSecondary, fontWeight: typography.weight.medium },
-  modalBtn: { flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  modalBtnText: { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },
+  modalBtn:       { flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  modalBtnText:   { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },
+
+  ongoingBadge:     { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.warningLight, borderWidth: 1, borderColor: colors.warning, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
+  ongoingBadgeText: { fontSize: typography.size.xs, color: colors.warning, fontWeight: typography.weight.semibold },
+
   qrWrapper: { padding: 16, backgroundColor: colors.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.cardBorder, alignItems: 'center', justifyContent: 'center' },
-  qrHint: { fontSize: typography.size.xs, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 8 },
-  closeBtn: { position: 'absolute', top: 14, right: 14 },
+  qrHint:    { fontSize: typography.size.xs, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 8 },
+  closeBtn:  { position: 'absolute', top: 14, right: 14 },
 });

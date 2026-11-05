@@ -8,7 +8,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { fetchWasteTypes, issueEco } from '../../services/eco';
+import { fetchWasteTypes, issueEco, claimRedemption } from '../../services/eco';
 
 const CORNER_SIZE  = 22;
 const CORNER_WIDTH = 3;
@@ -19,10 +19,15 @@ export default function QRScannerScreen() {
   const [flashOn, setFlashOn]             = useState(false);
   const [active, setActive]               = useState(true);
   const [scannedQR, setScannedQR]         = useState(null);
+  const [scanType, setScanType]           = useState(null); // 'resident' | 'reward'
+
+  // Resident (waste-drop) flow
   const [wasteTypes, setWasteTypes]       = useState([]);
   const [selectedWaste, setSelectedWaste] = useState(null);
   const weightKg                          = 2;
   const [confirmVisible, setConfirmVisible] = useState(false);
+
+  // Shared
   const [successVisible, setSuccessVisible] = useState(false);
   const [loading, setLoading]               = useState(false);
   const [error, setError]                   = useState('');
@@ -54,16 +59,30 @@ export default function QRScannerScreen() {
 
   function handleBarCodeScanned({ data }) {
     if (!active || scannedQR) return;
-    if (!data.startsWith('BESMART-RESIDENT-')) {
-      setError('Invalid QR code. Please scan a resident QR code.');
+
+    if (data.startsWith('BESMART-RESIDENT-')) {
+      setActive(false);
+      setScannedQR(data);
+      setScanType('resident');
+      setSelectedWaste(null);
+      setError('');
       return;
     }
-    setActive(false);
-    setScannedQR(data);
-    setSelectedWaste(null);
-    setError('');
+
+    if (data.startsWith('BESMART-REWARD-')) {
+      setActive(false);
+      setScannedQR(data);
+      setScanType('reward');
+      setError('');
+      // Immediately trigger the claim — no extra selection needed
+      handleClaimReward(data);
+      return;
+    }
+
+    setError('Invalid QR code. Please scan a resident or reward QR.');
   }
 
+  // ── Waste drop-off (resident QR) flow ────────────────────────────────────
   function handleIssueTokens() {
     if (!selectedWaste) return;
     setConfirmVisible(true);
@@ -76,7 +95,7 @@ export default function QRScannerScreen() {
     try {
       const payload = { qrValue: scannedQR, wasteTypeId: selectedWaste.id, weightKg };
       const data = await issueEco(payload);
-      setResult(data);
+      setResult({ type: 'issue', ...data });
       setSuccessVisible(true);
     } catch (err) {
       setError(err.message || 'Failed to issue ECO. Please try again.');
@@ -85,9 +104,29 @@ export default function QRScannerScreen() {
     }
   }
 
+  // ── Reward claim (reward QR) flow ─────────────────────────────────────────
+  async function handleClaimReward(qrValue) {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await claimRedemption(qrValue);
+      setResult({ type: 'claim', ...data });
+      setSuccessVisible(true);
+    } catch (err) {
+      setError(err.message || 'Failed to claim reward. Please try again.');
+      // Allow re-scan after error
+      setScannedQR(null);
+      setScanType(null);
+      setActive(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleDone() {
     setSuccessVisible(false);
     setScannedQR(null);
+    setScanType(null);
     setSelectedWaste(null);
     setResult(null);
     setError('');
@@ -96,6 +135,7 @@ export default function QRScannerScreen() {
 
   function handleScanAgain() {
     setScannedQR(null);
+    setScanType(null);
     setSelectedWaste(null);
     setError('');
     setActive(true);
@@ -185,7 +225,7 @@ export default function QRScannerScreen() {
       )}
 
       {/* Bottom sheet after scan */}
-      {scannedQR && (
+      {scannedQR && scanType === 'resident' && (
         <View style={styles.bottomSheet}>
           <View style={styles.residentCard}>
             <View style={styles.residentAvatar}>
@@ -250,6 +290,33 @@ export default function QRScannerScreen() {
         </View>
       )}
 
+      {/* Loading overlay while reward claim is in-flight */}
+      {scannedQR && scanType === 'reward' && !successVisible && (
+        <View style={styles.bottomSheet}>
+          <View style={styles.rewardClaimCard}>
+            <Ionicons name="gift-outline" size={28} color={colors.primary} />
+            <View style={styles.rewardClaimInfo}>
+              <Text style={styles.residentName}>Reward QR Detected</Text>
+              <Text style={styles.residentId} numberOfLines={1}>
+                ID: {scannedQR.replace('BESMART-REWARD-', '').slice(0, 18)}…
+              </Text>
+            </View>
+          </View>
+          {loading && (
+            <View style={styles.claimLoadingRow}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.claimLoadingText}>Processing claim…</Text>
+            </View>
+          )}
+          {error ? (
+            <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View>
+          ) : null}
+          <TouchableOpacity onPress={handleScanAgain} activeOpacity={0.7}>
+            <Text style={styles.cancelText}>Cancel — Scan Again</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Confirm modal */}
       <Modal visible={confirmVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -273,20 +340,45 @@ export default function QRScannerScreen() {
         </View>
       </Modal>
 
-      {/* Success modal */}
+      {/* Success modal — handles both waste-issue and reward-claim outcomes */}
       <Modal visible={successVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
-            <Text style={styles.modalTitle}>ECO Issued!</Text>
-            <Text style={styles.modalSubtitle}>
-              Successfully awarded{' '}
-              <Text style={{ color: colors.primary, fontWeight: typography.weight.bold }}>
-                +{result?.ecoAwarded} ECO
-              </Text>
-              {result?.residentName ? ` to ${result.residentName}` : ''}.
-            </Text>
-            <Text style={styles.txHash} numberOfLines={1}>tx: {result?.txHash?.slice(0, 22)}...</Text>
+            {result?.type === 'claim' ? (
+              <>
+                <Text style={styles.modalTitle}>Reward Claimed!</Text>
+                <Text style={styles.modalSubtitle}>
+                  <Text style={{ color: colors.textPrimary, fontWeight: typography.weight.bold }}>
+                    {result.rewardName}
+                  </Text>
+                  {result.residentName ? ` redeemed by ${result.residentName}` : ''}.
+                </Text>
+                <View style={styles.modalTokenRow}>
+                  <Ionicons name="diamond" size={20} color={colors.error} />
+                  <Text style={[styles.modalTokenAmount, { color: colors.error }]}>
+                    −{result.ecoCost} ECO
+                  </Text>
+                </View>
+                <Text style={styles.txHash} numberOfLines={1}>tx: {result?.txHash?.slice(0, 22)}...</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>ECO Issued!</Text>
+                <Text style={styles.modalSubtitle}>
+                  Successfully awarded{' '}
+                  <Text style={{ color: colors.primary, fontWeight: typography.weight.bold }}>
+                    +{result?.ecoAwarded} ECO
+                  </Text>
+                  {result?.residentName ? ` to ${result.residentName}` : ''}.
+                </Text>
+                <View style={styles.modalTokenRow}>
+                  <Ionicons name="diamond" size={20} color={colors.primary} />
+                  <Text style={styles.modalTokenAmount}>+{result?.ecoAwarded} ECO</Text>
+                </View>
+                <Text style={styles.txHash} numberOfLines={1}>tx: {result?.txHash?.slice(0, 22)}...</Text>
+              </>
+            )}
             <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleDone}>
               <Text style={styles.modalConfirmText}>Done</Text>
             </TouchableOpacity>
@@ -346,6 +438,10 @@ const styles = StyleSheet.create({
   issueBtnDisabled: { backgroundColor: colors.textMuted },
   issueBtnText:     { color: colors.secondary, fontWeight: typography.weight.bold, fontSize: typography.size.base },
   cancelText:       { textAlign: 'center', fontSize: typography.size.sm, color: colors.textSecondary, paddingVertical: 4 },
+  rewardClaimCard:   { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.successLight, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.successBorder, gap: 12 },
+  rewardClaimInfo:   { flex: 1, gap: 2 },
+  claimLoadingRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  claimLoadingText:  { fontSize: typography.size.sm, color: colors.textSecondary },
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   modalCard:        { backgroundColor: colors.secondary, borderRadius: 18, padding: 28, width: '100%', alignItems: 'center', gap: 12 },
   modalTitle:       { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.textPrimary },
